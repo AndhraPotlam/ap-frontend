@@ -1,16 +1,13 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ap-backend-taupe.vercel.app';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ap-backend-taupe.vercel.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Accept': 'application/json'
   }
 });
 
