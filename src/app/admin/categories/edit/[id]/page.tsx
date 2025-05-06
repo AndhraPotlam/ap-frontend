@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,14 +13,9 @@ import api from '@/lib/api';
 import { Category } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function EditCategoryPage({ params }: PageProps) {
+export default function EditCategoryPage() {
   const router = useRouter();
+  const { id } = useParams();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -42,8 +37,8 @@ export default function EditCategoryPage({ params }: PageProps) {
       
       try {
         setIsLoading(true);
-        console.log('Fetching category:', params.id);
-        const response = await api.get(`/categories/${params.id}`);
+        console.log('Fetching category:', id);
+        const response = await api.get(`/categories/${id}`);
         const categoryData = response.data;
         setCategory(categoryData);
         setFormData({
@@ -70,14 +65,14 @@ export default function EditCategoryPage({ params }: PageProps) {
     if (isAdmin) {
       fetchCategory();
     }
-  }, [params.id, router, isAdmin, authLoading]);
+  }, [id, router, isAdmin, authLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await api.put(`/categories/${params.id}`, formData);
+      await api.put(`/categories/${id}`, formData);
       toast.success('Category updated successfully');
       router.push('/admin/categories');
     } catch (error: any) {

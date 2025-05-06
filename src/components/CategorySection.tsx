@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 import api from '@/lib/api';
 
 export default function CategorySection() {
@@ -16,9 +16,11 @@ export default function CategorySection() {
       try {
         const response = await api.get('/products');
         const grouped = response.data.products.reduce((acc: Record<string, Product[]>, product: Product) => {
-          const category = product.category || 'Uncategorized';
-          if (!acc[category]) acc[category] = [];
-          acc[category].push(product);
+          const categoryName = typeof product.category === 'string' 
+            ? product.category 
+            : product.category?.name || 'Uncategorized';
+          if (!acc[categoryName]) acc[categoryName] = [];
+          acc[categoryName].push(product);
           return acc;
         }, {});
         setProductsByCategory(grouped);

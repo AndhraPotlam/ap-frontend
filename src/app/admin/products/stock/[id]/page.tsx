@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +15,9 @@ const mockProduct = {
   lowStockThreshold: 10,
 };
 
-export default function UpdateStockPage({ params }: { params: { id: string } }) {
+export default function UpdateStockPage() {
   const router = useRouter();
+  const { id } = useParams();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     currentStock: '',
@@ -30,7 +31,7 @@ export default function UpdateStockPage({ params }: { params: { id: string } }) 
       currentStock: mockProduct.currentStock.toString(),
       lowStockThreshold: mockProduct.lowStockThreshold.toString(),
     });
-  }, [params.id]);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
