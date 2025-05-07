@@ -47,8 +47,8 @@ export default function LoginPage() {
         
         if (isAuthenticated) {
           console.log('Authentication successful, redirecting...');
-          // Use direct window location change
-          window.location.href = '/';
+          // Use router.replace instead of window.location
+          router.replace('/');
         } else {
           console.log('Authentication failed after login');
           setError('Failed to authenticate after login. Please try again.');

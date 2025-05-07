@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error.response?.status === 401) {
         clearAuthState();
         if (!pathname.startsWith('/auth/')) {
-          router.push('/auth/login');
+          router.replace('/auth/login');
         }
       }
       return false;
@@ -78,10 +78,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (!isAuthPage && !user) {
       checkAuth();
+    } else if (isAuthPage && user) {
+      router.replace('/');
     } else {
       setIsLoading(false);
     }
-  }, [pathname, checkAuth, user]);
+  }, [pathname, checkAuth, user, router]);
 
   const logout = useCallback(async () => {
     try {
