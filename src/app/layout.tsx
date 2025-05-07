@@ -1,3 +1,4 @@
+'use client';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -8,6 +9,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Skeleton } from "@/components/ui/skeleton";
 import ClientLayout from './ClientLayout';
+import { useEffect } from "react";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,6 +23,20 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          })
+          .catch(error => {
+            console.log('ServiceWorker registration failed: ', error);
+          });
+      });
+    }
+  }, []);
+
   return (
     <html lang="en" data-theme="cupcake">
       <head>
@@ -35,9 +51,12 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/andhrapotlamLogo" />
       </head>
       <body className={`${inter.className} min-h-screen flex flex-col text-base-content bg-base-100`}>
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+        <AuthProvider>
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
