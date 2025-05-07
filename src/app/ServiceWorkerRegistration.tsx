@@ -15,8 +15,8 @@ export default function ServiceWorkerRegistration() {
               await registration.unregister();
             }
 
-            // Register the new service worker
-            const registration = await navigator.serviceWorker.register('/sw.js', {
+            // Register the new service worker with a different path
+            const registration = await navigator.serviceWorker.register('/_next/static/sw.js', {
               scope: '/',
               type: 'module',
               updateViaCache: 'none'
