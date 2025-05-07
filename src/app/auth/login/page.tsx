@@ -36,13 +36,20 @@ export default function LoginPage() {
       setIsLoading(true);
       setError('');
       
+      console.log('Attempting login...');
       const loginResponse = await api.post('/users/login', formData);
+      console.log('Login response:', loginResponse);
       
       if (loginResponse.status === 200) {
+        console.log('Login successful, checking auth...');
         const isAuthenticated = await checkAuth();
+        console.log('Auth check result:', isAuthenticated);
+        
         if (isAuthenticated) {
+          console.log('Authentication successful, redirecting...');
           router.push('/');
         } else {
+          console.log('Authentication failed after login');
           setError('Failed to authenticate after login. Please try again.');
         }
       }
