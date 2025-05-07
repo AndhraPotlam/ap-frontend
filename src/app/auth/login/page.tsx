@@ -28,16 +28,27 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       setError('');
+      
+      // Login request
       const loginResponse = await api.post('/users/login', formData);
+      
       if (loginResponse.status === 200) {
+        // Wait a bit for the cookie to be set
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check authentication
         const isAuthenticated = await checkAuth();
+        
         if (isAuthenticated) {
+          // Force a router refresh to update the auth state
+          router.refresh();
           router.replace('/');
         } else {
           setError('Failed to authenticate after login. Please try again.');
         }
       }
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);

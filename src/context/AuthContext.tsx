@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
+      setIsLoading(true);
       const response = await api.get('/users/me');
       if (response.data) {
         setUser(response.data);
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     } catch (error: any) {
+      console.error('Auth check error:', error);
       if (error.response?.status === 401) {
         // Token is invalid or expired
         clearAuthState();
