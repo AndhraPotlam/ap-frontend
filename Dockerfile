@@ -4,9 +4,18 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install
+# Use npm ci for production install
+RUN npm ci
 
 COPY . .
 
-# Change to development mode
-CMD ["npm", "run", "dev"]
+# Build the app
+RUN npm run build
+
+# Install serve to run the production build
+RUN npm install -g serve
+
+EXPOSE 3000
+
+# Serve the production build
+CMD ["serve", "-s", "build", "-l", "3000"]
