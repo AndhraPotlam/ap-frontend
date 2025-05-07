@@ -7,16 +7,22 @@ export default function ServiceWorkerRegistration() {
     const registerServiceWorker = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/'
-          });
-          
-          if (registration.installing) {
-            console.log('Service worker installing');
-          } else if (registration.waiting) {
-            console.log('Service worker installed');
-          } else if (registration.active) {
-            console.log('Service worker active');
+          // Only register in production and HTTPS
+          if (process.env.NODE_ENV === 'production' && window.location.protocol === 'https:') {
+            const registration = await navigator.serviceWorker.register('/sw.js', {
+              scope: '/',
+              type: 'module'
+            });
+            
+            if (registration.installing) {
+              console.log('Service worker installing');
+            } else if (registration.waiting) {
+              console.log('Service worker installed');
+            } else if (registration.active) {
+              console.log('Service worker active');
+            }
+          } else {
+            console.log('Service worker registration skipped - not in production or not HTTPS');
           }
         } catch (error) {
           console.error('Service worker registration failed:', error);
