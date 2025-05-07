@@ -62,11 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('Auth check error:', error);
       if (error.response?.status === 401) {
-        // Token is invalid or expired
         clearAuthState();
-        toast.error('Session expired. Please login again.');
         if (!pathname.startsWith('/auth/')) {
-          router.replace('/auth/login');
+          router.push('/auth/login');
         }
       }
       return false;
@@ -77,13 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const isAuthPage = pathname.startsWith('/auth/');
-
-    if (!isAuthPage) {
+    
+    if (!isAuthPage && !user) {
       checkAuth();
     } else {
       setIsLoading(false);
     }
-  }, [pathname, checkAuth]);
+  }, [pathname, checkAuth, user]);
 
   const logout = useCallback(async () => {
     try {
@@ -92,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout failed:', error);
     } finally {
       clearAuthState();
-      router.replace('/auth/login');
+      router.push('/auth/login');
     }
   }, [router, clearAuthState]);
 

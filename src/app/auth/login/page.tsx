@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -13,13 +13,20 @@ import api from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { checkAuth } = useAuth();
+  const { checkAuth, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,20 +36,12 @@ export default function LoginPage() {
       setIsLoading(true);
       setError('');
       
-      // Login request
       const loginResponse = await api.post('/users/login', formData);
       
       if (loginResponse.status === 200) {
-        // Wait a bit for the cookie to be set
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Check authentication
         const isAuthenticated = await checkAuth();
-        
         if (isAuthenticated) {
-          // Force a router refresh to update the auth state
-          router.refresh();
-          router.replace('/');
+          router.push('/');
         } else {
           setError('Failed to authenticate after login. Please try again.');
         }
