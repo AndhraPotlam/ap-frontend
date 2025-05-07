@@ -8,7 +8,6 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Skeleton } from "@/components/ui/skeleton";
 import ClientLayout from './ClientLayout';
-import ServiceWorkerRegistration from './ServiceWorkerRegistration';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,7 +41,6 @@ export default function RootLayout({
           </ClientLayout>
           <Toaster />
         </AuthProvider>
-        <ServiceWorkerRegistration />
       </body>
     </html>
   );
