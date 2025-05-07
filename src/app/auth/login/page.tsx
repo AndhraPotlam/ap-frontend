@@ -47,7 +47,13 @@ export default function LoginPage() {
         
         if (isAuthenticated) {
           console.log('Authentication successful, redirecting...');
-          router.push('/');
+          // Try both navigation methods
+          router.replace('/');
+          setTimeout(() => {
+            if (window.location.pathname === '/auth/login') {
+              window.location.href = '/';
+            }
+          }, 100);
         } else {
           console.log('Authentication failed after login');
           setError('Failed to authenticate after login. Please try again.');
