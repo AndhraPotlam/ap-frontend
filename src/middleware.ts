@@ -7,21 +7,28 @@ export function middleware(request: NextRequest) {
   const isAdminPage = pathname.startsWith('/admin/');
   const token = request.cookies.get('token');
 
+  // Handle RSC requests first
+  if (request.nextUrl.searchParams.has('_rsc')) {
+    // For auth pages, don't prefetch
+    if (isAuthPage) {
+      return new NextResponse(null, { status: 404 });
+    }
+    
+    return NextResponse.next({
+      headers: {
+        'Cache-Control': 'no-store',
+        'Vercel-CDN-Cache-Control': 'no-store',
+        'CDN-Cache-Control': 'no-store',
+      },
+    });
+  }
+
   if (!token && !isAuthPage) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // Handle RSC requests
-  if (request.nextUrl.searchParams.has('_rsc')) {
-    return NextResponse.next({
-      headers: {
-        'Cache-Control': 'no-store',
-      },
-    });
   }
 
   return NextResponse.next();
