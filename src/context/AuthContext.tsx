@@ -1,129 +1,69 @@
 'use client';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import api from '@/lib/api';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
-interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: 'user' | 'admin';
-}
+import api from '@/lib/api';
 
 interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  isAdmin: boolean;
   isAuthenticated: boolean;
+  user: any | null;
   checkAuth: () => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isLoading: true,
-  isAdmin: false,
-  isAuthenticated: false,
-  checkAuth: async () => false,
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
 
-  const clearAuthState = useCallback(() => {
-    setUser(null);
-    setIsLoading(false);
-    
-    // Clear all cookies
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i];
-      const eqPos = cookie.indexOf('=');
-      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    }
-  }, []);
-
-  const checkAuth = useCallback(async () => {
+  const checkAuth = async () => {
     try {
-      setIsLoading(true);
       const response = await api.get('/users/me');
-      
-      if (response.data) {
+      if (response.status === 200) {
         setUser(response.data);
+        setIsAuthenticated(true);
         return true;
       }
-      
-      clearAuthState();
-      return false;
-    } catch (error: any) {
-      console.error('Auth check error:', error);
-      
-      if (error.response?.status === 401) {
-        clearAuthState();
-        if (!pathname.startsWith('/auth/')) {
-          router.replace('/auth/login');
-        }
-      } else {
-        toast.error('Failed to check authentication status');
-      }
-      
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [router, pathname, clearAuthState]);
-
-  // Initial auth check
-  useEffect(() => {
-    if (!user) {
-      checkAuth();
-    }
-  }, []); // Only run on mount
-
-  // Handle auth page redirects
-  useEffect(() => {
-    const isAuthPage = pathname.startsWith('/auth/');
-    
-    if (isAuthPage && user) {
-      router.replace('/');
-    }
-  }, [pathname, user, router]);
-
-  const logout = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await api.post('/users/logout');
-      toast.success('Logged out successfully');
     } catch (error) {
-      console.error('Logout failed:', error);
-      toast.error('Failed to logout. Please try again.');
-    } finally {
-      clearAuthState();
-      router.replace('/auth/login');
+      setUser(null);
+      setIsAuthenticated(false);
     }
-  }, [router, clearAuthState]);
+    return false;
+  };
 
-  const isAdmin = user?.role === 'admin';
-  const isAuthenticated = !!user;
+  const logout = async () => {
+    try {
+      await api.post('/users/logout');
+      setUser(null);
+      setIsAuthenticated(false);
+      toast.success('Logged out successfully');
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to logout. Please try again.');
+    }
+  };
+
+  // Initialize auth state only once
+  useEffect(() => {
+    const initializeAuth = async () => {
+      await checkAuth();
+      setIsInitialized(true);
+    };
+
+    initializeAuth();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Don't render children until auth is initialized
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isLoading, 
-        isAdmin, 
-        isAuthenticated, 
-        checkAuth, 
-        logout 
-      }}
-    >
+    <AuthContext.Provider value={{ isAuthenticated, user, checkAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -131,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

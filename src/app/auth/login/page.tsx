@@ -21,13 +21,34 @@ export default function LoginPage() {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Redirect if already authenticated
+  // Check auth state only once on mount
   useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/');
-    }
-  }, [isAuthenticated, router]);
+    const checkAuthState = async () => {
+      try {
+        const auth = await checkAuth();
+        if (auth) {
+          router.replace('/');
+        }
+      } catch (err) {
+        console.error('Auth check error:', err);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuthState();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Don't render the form while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,21 +71,15 @@ export default function LoginPage() {
         return;
       }
       
-      console.log('Attempting login...');
       const loginResponse = await api.post('/users/login', formData);
-      console.log('Login response:', loginResponse);
       
       if (loginResponse.status === 200) {
-        console.log('Login successful, checking auth...');
         const isAuthenticated = await checkAuth();
-        console.log('Auth check result:', isAuthenticated);
         
         if (isAuthenticated) {
-          console.log('Authentication successful, redirecting...');
           toast.success('Login successful!');
           router.replace('/');
         } else {
-          console.log('Authentication failed after login');
           setError('Failed to authenticate after login. Please try again.');
           toast.error('Authentication failed. Please try again.');
         }
