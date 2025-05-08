@@ -73,17 +73,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router, pathname, clearAuthState]);
 
+  // Initial auth check
+  useEffect(() => {
+    if (!user) {
+      checkAuth();
+    }
+  }, []); // Only run on mount
+
+  // Handle auth page redirects
   useEffect(() => {
     const isAuthPage = pathname.startsWith('/auth/');
     
-    if (!isAuthPage && !user) {
-      checkAuth();
-    } else if (isAuthPage && user) {
+    if (isAuthPage && user) {
       router.replace('/');
-    } else {
-      setIsLoading(false);
     }
-  }, [pathname, checkAuth, user, router]);
+  }, [pathname, user, router]);
 
   const logout = useCallback(async () => {
     try {
@@ -92,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout failed:', error);
     } finally {
       clearAuthState();
-      router.push('/auth/login');
+      router.replace('/auth/login');
     }
   }, [router, clearAuthState]);
 
