@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, User, ShoppingCart, Heart, Loader2 } from "lucide-react";
+import { toast } from 'sonner';
 import api from '@/lib/api';
 
 export default function LoginPage() {
@@ -36,6 +37,19 @@ export default function LoginPage() {
       setIsLoading(true);
       setError('');
       
+      // Validate form data
+      if (!formData.email || !formData.password) {
+        setError('Please fill in all fields');
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+      
       console.log('Attempting login...');
       const loginResponse = await api.post('/users/login', formData);
       console.log('Login response:', loginResponse);
@@ -47,19 +61,32 @@ export default function LoginPage() {
         
         if (isAuthenticated) {
           console.log('Authentication successful, redirecting...');
-          // Use router.replace instead of window.location
+          toast.success('Login successful!');
           router.replace('/');
         } else {
           console.log('Authentication failed after login');
           setError('Failed to authenticate after login. Please try again.');
+          toast.error('Authentication failed. Please try again.');
         }
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials and try again.');
+      const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials and try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   return (
@@ -116,7 +143,7 @@ export default function LoginPage() {
             <CardDescription>Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive" className="mb-6">
                   <AlertCircle className="h-4 w-4" />
@@ -129,12 +156,14 @@ export default function LoginPage() {
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="Enter your email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={handleInputChange}
                     required
                     disabled={isLoading}
+                    autoComplete="email"
                   />
                 </div>
 
@@ -142,12 +171,14 @@ export default function LoginPage() {
                   <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     placeholder="Enter your password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={handleInputChange}
                     required
                     disabled={isLoading}
+                    autoComplete="current-password"
                   />
                 </div>
               </div>

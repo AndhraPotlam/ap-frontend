@@ -54,19 +54,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const response = await api.get('/users/me');
+      
       if (response.data) {
         setUser(response.data);
         return true;
       }
+      
+      clearAuthState();
       return false;
     } catch (error: any) {
       console.error('Auth check error:', error);
+      
       if (error.response?.status === 401) {
         clearAuthState();
         if (!pathname.startsWith('/auth/')) {
           router.replace('/auth/login');
         }
+      } else {
+        toast.error('Failed to check authentication status');
       }
+      
       return false;
     } finally {
       setIsLoading(false);
@@ -91,9 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      setIsLoading(true);
       await api.post('/users/logout');
+      toast.success('Logged out successfully');
     } catch (error) {
       console.error('Logout failed:', error);
+      toast.error('Failed to logout. Please try again.');
     } finally {
       clearAuthState();
       router.replace('/auth/login');
@@ -104,7 +114,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAdmin, isAuthenticated, checkAuth, logout }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        isLoading, 
+        isAdmin, 
+        isAuthenticated, 
+        checkAuth, 
+        logout 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
