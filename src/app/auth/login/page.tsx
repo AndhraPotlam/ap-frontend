@@ -201,12 +201,12 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button variant="link" asChild>
-              <Link href="/auth/forgot-password">Forgot password?</Link>
+              <Link href="/auth/forgot-password" prefetch={false}>Forgot password?</Link>
             </Button>
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">Don't have an account?</p>
               <Button variant="outline" asChild>
-                <Link href="/auth/register">Create account</Link>
+                <Link href="/auth/register" prefetch={false}>Create account</Link>
               </Button>
             </div>
           </CardFooter>
