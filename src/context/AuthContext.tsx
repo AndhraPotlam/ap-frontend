@@ -4,9 +4,19 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 
+interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'user' | 'admin';
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any | null;
+  user: User | null;
+  isAdmin: boolean;
+  isLoading: boolean;
   checkAuth: () => Promise<boolean>;
   logout: () => Promise<void>;
 }
@@ -15,12 +25,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   const checkAuth = async () => {
     try {
+      setIsLoading(true);
       const response = await api.get('/users/me');
       if (response.status === 200) {
         setUser(response.data);
@@ -30,12 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       setUser(null);
       setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
     }
     return false;
   };
 
   const logout = async () => {
     try {
+      setIsLoading(true);
       await api.post('/users/logout');
       setUser(null);
       setIsAuthenticated(false);
@@ -44,6 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -62,8 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
+  const isAdmin = user?.role === 'admin';
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, checkAuth, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      user, 
+      isAdmin,
+      isLoading,
+      checkAuth, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );
