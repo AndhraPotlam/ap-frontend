@@ -4,13 +4,18 @@ const nextConfig = {
     // Ignore ESLint errors during builds
     ignoreDuringBuilds: true,
   },
+  output: 'standalone',
   images: {
-    domains: [
-      'image.com',
-      'images.unsplash.com',
-      'placehold.co',
-      'andhra-potlam.s3.ap-south-1.amazonaws.com',
-      'ap-backend-taupe.vercel.app'
+    domains: ['ap-backend-taupe.vercel.app', 'localhost'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ap-backend-taupe.vercel.app',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      }
     ],
   },
   async headers() {
@@ -48,6 +53,12 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  experimental: {
+    serverActions: true,
+  },
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
 }
 
