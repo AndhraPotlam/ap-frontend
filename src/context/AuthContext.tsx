@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 
@@ -29,31 +29,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const clearAuthState = () => {
+    setUser(null);
+    setIsAuthenticated(false);
+    // Clear cookies
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  };
 
   const checkAuth = async () => {
     try {
       setIsLoading(true);
       const response = await api.get('/users/me');
-      if (response.status === 200) {
+      if (response.status === 200 && response.data) {
         setUser(response.data);
         setIsAuthenticated(true);
+        // Set role cookie
+        document.cookie = `role=${response.data.role}; path=/;`;
         return true;
       }
+      clearAuthState();
+      return false;
     } catch (error) {
-      setUser(null);
-      setIsAuthenticated(false);
+      console.error('Auth check error:', error);
+      clearAuthState();
+      return false;
     } finally {
       setIsLoading(false);
     }
-    return false;
   };
 
   const logout = async () => {
     try {
       setIsLoading(true);
       await api.post('/users/logout');
-      setUser(null);
-      setIsAuthenticated(false);
+      clearAuthState();
       toast.success('Logged out successfully');
       router.push('/auth/login');
     } catch (error) {
@@ -73,6 +85,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
   }, []); // Empty dependency array means this runs once on mount
+
+  // Handle auth redirects
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const isPublicPath = pathname.startsWith('/auth/');
+    const isAdminPath = pathname.startsWith('/admin/');
+
+    if (isAuthenticated && isPublicPath) {
+      router.replace('/');
+    } else if (!isAuthenticated && !isPublicPath) {
+      router.replace('/auth/login');
+    } else if (isAdminPath && user?.role !== 'admin') {
+      router.replace('/');
+    }
+  }, [isInitialized, isAuthenticated, pathname, router, user?.role]);
 
   // Don't render children until auth is initialized
   if (!isInitialized) {
