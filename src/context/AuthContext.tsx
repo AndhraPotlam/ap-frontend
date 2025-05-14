@@ -88,19 +88,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Handle auth redirects
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || isLoading) return;
 
     const isPublicPath = pathname.startsWith('/auth/');
-    const isAdminPath = pathname.startsWith('/admin/');
 
+    // Only redirect if we're on a public path and authenticated
     if (isAuthenticated && isPublicPath) {
       router.replace('/');
-    } else if (!isAuthenticated && !isPublicPath) {
-      router.replace('/auth/login');
-    } else if (isAdminPath && user?.role !== 'admin') {
-      router.replace('/');
     }
-  }, [isInitialized, isAuthenticated, pathname, router, user?.role]);
+  }, [isInitialized, isAuthenticated, pathname, router, isLoading]);
 
   // Don't render children until auth is initialized
   if (!isInitialized) {

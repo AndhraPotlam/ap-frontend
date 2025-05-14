@@ -40,12 +40,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // If no token and trying to access protected route
+  // If no token and trying to access protected route (except public paths)
   if (!token && !isPublicPath) {
-    const response = NextResponse.redirect(new URL('/auth/login', request.url));
-    response.cookies.delete('token');
-    response.cookies.delete('role');
-    return response;
+    // Don't redirect if already on login page to prevent loops
+    if (pathname !== '/auth/login') {
+      const response = NextResponse.redirect(new URL('/auth/login', request.url));
+      // Clear cookies only if they exist and we're redirecting
+      if (request.cookies.get('token')) {
+        response.cookies.delete('token');
+      }
+      if (request.cookies.get('role')) {
+        response.cookies.delete('role');
+      }
+      return response;
+    }
   }
 
   // If trying to access admin routes without admin role
