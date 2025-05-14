@@ -6,7 +6,8 @@
   "framework": "nextjs",
   "regions": ["bom1"],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://ap-backend-taupe.vercel.app/api"
+    "NEXT_PUBLIC_API_URL": "https://ap-backend-taupe.vercel.app/api",
+    "VERCEL": "true"
   },
   "headers": [
     {
@@ -23,8 +24,29 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
         }
       ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "/auth/login",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache"
+      }
     }
   ]
 } 

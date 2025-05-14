@@ -38,17 +38,21 @@ const nextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'no-store, must-revalidate',
           },
         ],
       },
       {
-        // Specific headers for manifest.json
-        source: '/manifest.json',
+        // Specific headers for auth routes
+        source: '/auth/:path*',
         headers: [
           {
-            key: 'Content-Type',
-            value: 'application/manifest+json',
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
           },
         ],
       },
@@ -59,6 +63,7 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    VERCEL: process.env.VERCEL || false,
   },
 }
 

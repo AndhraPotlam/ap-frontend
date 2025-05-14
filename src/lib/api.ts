@@ -6,12 +6,25 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Add specific config for Vercel deployment
+  ...(process.env.VERCEL && {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    }
+  })
 });
 
 // Add request interceptor
 api.interceptors.request.use(
   (config) => {
-    // You can add auth headers here if needed
+    // Add timestamp to prevent caching in Vercel
+    if (process.env.VERCEL) {
+      config.params = { 
+        ...config.params,
+        _t: Date.now() 
+      };
+    }
     return config;
   },
   (error) => {
@@ -22,9 +35,14 @@ api.interceptors.request.use(
 // Add response interceptor
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      // Use window.location for hard redirect to prevent caching
+      if (process.env.VERCEL) {
+        window.location.href = '/auth/login';
+        return;
+      }
+      // For local development, use router
       window.location.href = '/auth/login';
     }
     return Promise.reject(error);
