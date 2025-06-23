@@ -9,7 +9,8 @@ services:
       - "3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://13.233.246.213/api
+    env_file:
+      - .env
     networks:
       - app-network
 
