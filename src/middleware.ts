@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token');
   const role = request.cookies.get('role')?.value;
-
+  console.log('MIDDLEWARE:', { pathname, token: token?.value });
   // Handle RSC requests
   if (request.nextUrl.searchParams.has('_rsc')) {
     return NextResponse.next({
