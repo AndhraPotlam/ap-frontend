@@ -42,23 +42,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       setIsLoading(true);
+      console.log('🔍 Starting auth check...');
+      
       const response = await api.get('/users/me');
+      console.log('🔍 /users/me response status:', response.status);
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('🔍 User data received:', { id: userData._id, email: userData.email, role: userData.role });
+        
         setUser(userData);
         setIsAuthenticated(true);
         // Set role cookie for middleware
         document.cookie = `role=${userData.role}; path=/; max-age=86400; SameSite=Strict`;
+        console.log('✅ Auth check successful');
         return true;
       } else if (response.status === 401) {
+        console.log('❌ Auth check failed - 401 Unauthorized');
         clearAuthState();
         return false;
       } else {
+        console.error('❌ Auth check failed - unexpected status:', response.status);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('❌ Auth check error:', error);
       clearAuthState();
       return false;
     } finally {
@@ -101,20 +109,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isPublicPath = pathname.startsWith('/auth/');
     const isAdminPath = pathname.startsWith('/admin/');
 
+    console.log('🔄 Auth redirect check:', {
+      isInitialized,
+      isLoading,
+      isAuthenticated,
+      pathname,
+      isPublicPath,
+      isAdminPath,
+      userRole: user?.role
+    });
+
     // If user is authenticated and tries to access auth pages, redirect to home
     if (isAuthenticated && isPublicPath) {
+      console.log('🔄 Redirecting authenticated user from auth page to home');
       router.push('/');
       return;
     }
 
     // If user is not authenticated and tries to access protected routes, redirect to login
     if (!isAuthenticated && !isPublicPath) {
+      console.log('🔄 Redirecting unauthenticated user to login');
       router.push('/auth/login');
       return;
     }
 
     // If user is not admin and tries to access admin routes, redirect to home
     if (isAuthenticated && isAdminPath && user?.role !== 'admin') {
+      console.log('🔄 Redirecting non-admin user from admin page to home');
       router.push('/');
       return;
     }

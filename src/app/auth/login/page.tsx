@@ -76,12 +76,30 @@ export default function LoginPage() {
       const response = await api.post('/users/login', formData);
       
       if (response.ok) {
+        console.log('✅ Login successful, checking auth...');
+        
+        // Wait a bit for cookies to be set
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const isAuthenticated = await checkAuth();
+        console.log('🔍 Auth check result:', isAuthenticated);
         
         if (isAuthenticated) {
           toast.success('Login successful!');
+          console.log('🚀 Redirecting to home...');
+          
+          // Try immediate redirect
           router.replace('/');
+          
+          // Fallback redirect after a short delay
+          setTimeout(() => {
+            if (window.location.pathname === '/auth/login') {
+              console.log('🔄 Fallback redirect to home...');
+              router.replace('/');
+            }
+          }, 1000);
         } else {
+          console.error('❌ Auth check failed after login');
           setError('Failed to authenticate after login. Please try again.');
           toast.error('Authentication failed. Please try again.');
         }
