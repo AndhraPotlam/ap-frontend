@@ -88,16 +88,9 @@ export default function LoginPage() {
           toast.success('Login successful!');
           console.log('🚀 Redirecting to home...');
           
-          // Try immediate redirect
-          router.replace('/');
-          
-          // Fallback redirect after a short delay
-          setTimeout(() => {
-            if (window.location.pathname === '/auth/login') {
-              console.log('🔄 Fallback redirect to home...');
-              router.replace('/');
-            }
-          }, 1000);
+          // Use router.push for navigation
+          router.push('/');
+          console.log('✅ Router.push called');
         } else {
           console.error('❌ Auth check failed after login');
           setError('Failed to authenticate after login. Please try again.');
