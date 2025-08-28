@@ -6,7 +6,7 @@ const nextConfig = {
   },
   output: 'standalone',
   images: {
-    domains: ['ap-backend-taupe.vercel.app', 'localhost'],
+    domains: ['ap-backend-taupe.vercel.app', 'localhost', 'andhra-potlam.s3.ap-south-1.amazonaws.com'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -15,6 +15,14 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: 'andhra-potlam.s3.ap-south-1.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
       }
     ],
   },
@@ -62,8 +70,7 @@ const nextConfig = {
     serverActions: true,
   },
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    VERCEL: process.env.VERCEL || false,
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL
   },
 }
 

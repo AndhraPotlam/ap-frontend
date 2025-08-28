@@ -53,7 +53,12 @@ export default function OrdersPage() {
         try {
           const endpoint = isAdmin ? '/orders' : '/orders/my-orders';
           const response = await api.get(endpoint);
-          setOrders(response.data);
+          if (response.ok) {
+            const data = await response.json();
+            setOrders(data);
+          } else {
+            toast.error('Failed to load orders');
+          }
         } catch (error) {
           console.error('Error fetching orders:', error);
           toast.error('Failed to load orders');
@@ -209,7 +214,10 @@ export default function OrdersPage() {
       // Refresh orders
       const endpoint = isAdmin ? '/orders' : '/orders/my-orders';
       const response = await api.get(endpoint);
-      setOrders(response.data);
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data);
+      }
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Failed to update order');
@@ -218,13 +226,20 @@ export default function OrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      await api.patch(`/orders/${orderId}/status`, { status: newStatus });
-      toast.success('Order status updated successfully');
-      
-      // Refresh orders
-      const endpoint = isAdmin ? '/orders' : '/orders/my-orders';
-      const response = await api.get(endpoint);
-      setOrders(response.data);
+      const response = await api.patch(`/orders/${orderId}/status`, { status: newStatus });
+      if (response.ok) {
+        toast.success('Order status updated successfully');
+        
+        // Refresh orders
+        const endpoint = isAdmin ? '/orders' : '/orders/my-orders';
+        const refreshResponse = await api.get(endpoint);
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          setOrders(data);
+        }
+      } else {
+        toast.error('Failed to update order status');
+      }
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('Failed to update order status');

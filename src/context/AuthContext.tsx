@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
-import api from '@/lib/api';
+import api, { tokenUtils } from '@/lib/api';
 
 interface User {
   _id: string;
@@ -34,8 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearAuthState = () => {
     setUser(null);
     setIsAuthenticated(false);
-    // Clear cookies
-    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    tokenUtils.removeToken();
+    // Clear role cookie
     document.cookie = 'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   };
 
@@ -43,15 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const response = await api.get('/users/me');
-      if (response.status === 200 && response.data) {
-        setUser(response.data);
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
         setIsAuthenticated(true);
-        // Set role cookie
-        document.cookie = `role=${response.data.role}; path=/;`;
+        // Set role cookie for middleware
+        document.cookie = `role=${userData.role}; path=/; max-age=86400; SameSite=Strict`;
         return true;
+      } else if (response.status === 401) {
+        clearAuthState();
+        return false;
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      clearAuthState();
-      return false;
     } catch (error) {
       console.error('Auth check error:', error);
       clearAuthState();
@@ -70,7 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/auth/login');
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Failed to logout. Please try again.');
+      // Even if logout API fails, clear local state
+      clearAuthState();
+      toast.error('Logged out successfully');
+      router.push('/auth/login');
     } finally {
       setIsLoading(false);
     }
@@ -91,12 +99,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isInitialized || isLoading) return;
 
     const isPublicPath = pathname.startsWith('/auth/');
+    const isAdminPath = pathname.startsWith('/admin/');
 
-    // Only redirect if we're on a public path and authenticated
+    // If user is authenticated and tries to access auth pages, redirect to home
     if (isAuthenticated && isPublicPath) {
-      router.replace('/');
+      router.push('/');
+      return;
     }
-  }, [isInitialized, isAuthenticated, pathname, router, isLoading]);
+
+    // If user is not authenticated and tries to access protected routes, redirect to login
+    if (!isAuthenticated && !isPublicPath) {
+      router.push('/auth/login');
+      return;
+    }
+
+    // If user is not admin and tries to access admin routes, redirect to home
+    if (isAuthenticated && isAdminPath && user?.role !== 'admin') {
+      router.push('/');
+      return;
+    }
+  }, [isInitialized, isAuthenticated, pathname, router, isLoading, user?.role]);
 
   // Don't render children until auth is initialized
   if (!isInitialized) {

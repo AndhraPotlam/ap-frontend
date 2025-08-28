@@ -28,7 +28,9 @@ export default function LoginPage() {
     const checkAuthState = async () => {
       try {
         const auth = await checkAuth();
+        console.log("auth:", auth);
         if (auth) {
+          console.log("redirecting to home from login page");
           router.replace('/');
         }
       } catch (err) {
@@ -71,9 +73,9 @@ export default function LoginPage() {
         return;
       }
       
-      const loginResponse = await api.post('/users/login', formData);
+      const response = await api.post('/users/login', formData);
       
-      if (loginResponse.status === 200) {
+      if (response.ok) {
         const isAuthenticated = await checkAuth();
         
         if (isAuthenticated) {
@@ -83,10 +85,16 @@ export default function LoginPage() {
           setError('Failed to authenticate after login. Please try again.');
           toast.error('Authentication failed. Please try again.');
         }
+      } else {
+        // Handle error response
+        const errorData = await response.json();
+        const errorMessage = errorData.message || 'Login failed. Please check your credentials and try again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials and try again.';
+      const errorMessage = 'Login failed. Please check your credentials and try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

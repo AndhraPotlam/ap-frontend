@@ -36,7 +36,12 @@ export default function AddProductPage() {
     const fetchCategories = async () => {
       try {
         const response = await api.get('/categories');
-        setCategories(response.data);
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        } else {
+          toast.error('Failed to fetch categories');
+        }
       }
       catch (error) {
         console.error('Error fetching categories:', error);
@@ -56,22 +61,26 @@ export default function AddProductPage() {
         const formData = new FormData();
         formData.append('image', file);
         
-        const response = await api.post('/upload/image', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        const response = await api.postForm('/upload/image', formData);
         
-        // Update form data with the new image URL
-        setFormData(prev => ({
-          ...prev,
-          imageUrl: response.data.imageUrl
-        }));
-        
-        toast.success('Image uploaded successfully');
+        if (response.ok) {
+          const data = await response.json();
+          // Update form data with the new image URL
+          setFormData(prev => ({
+            ...prev,
+            imageUrl: data.imageUrl
+          }));
+          
+          toast.success('Image uploaded successfully');
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.message || 'Failed to upload image');
+          e.target.value = '';
+          setSelectedFile(null);
+        }
       } catch (error: any) {
         console.error('Error uploading image:', error);
-        toast.error(error.response?.data?.message || 'Failed to upload image');
+        toast.error('Failed to upload image');
         // Reset the file input
         e.target.value = '';
         setSelectedFile(null);
@@ -90,12 +99,17 @@ export default function AddProductPage() {
         stock: parseInt(formData.stock),
       };
 
-      await api.post('/products', productData);
-      toast.success('Product added successfully');
-      router.push('/admin/products');
+      const response = await api.post('/products', productData);
+      if (response.ok) {
+        toast.success('Product added successfully');
+        router.push('/admin/products');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to add product');
+      }
     } catch (error: any) {
       console.error('Error adding product:', error);
-      toast.error(error.response?.data?.message || 'Failed to add product');
+      toast.error('Failed to add product');
     } finally {
       setIsLoading(false);
     }

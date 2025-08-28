@@ -11,8 +11,12 @@ import { Plus, Minus } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import ProductCard from './ProductCard';
 
+interface ProductWithWarning extends Product {
+  imageUrlWarning?: string;
+}
+
 interface ProductListProps {
-  products: Product[];
+  products: ProductWithWarning[];
 }
 
 export default function ProductList({ products }: ProductListProps) {
@@ -23,8 +27,15 @@ export default function ProductList({ products }: ProductListProps) {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const response = await api.get('/categories');
-      setCategories(response.data);
+      try {
+        const response = await api.get('/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
     };
     fetchCategories();
   }, []);
@@ -78,48 +89,6 @@ export default function ProductList({ products }: ProductListProps) {
           const quantity = cartItem?.quantity || 0;
 
           return (
-            // <Card key={product._id} className="p-4">
-            //   <div className="flex flex-col gap-4">
-            //     {/* Product Details Row */}
-            //     <div className="flex items-center gap-4">
-            //       <img
-            //         src={product.imageUrl || '/placeholder.png'}
-            //         alt={product.name}
-            //         className="w-24 h-24 object-cover rounded"
-            //       />
-            //       <div className="flex-1">
-            //         <h3 className="font-medium text-lg">{product.name}</h3>
-            //         <p className="text-sm text-muted-foreground">{product.description}</p>
-            //         <p className="text-lg font-bold mt-2">₹{product.price}</p>
-            //       </div>
-            //     </div>
-
-            //     {/* Quantity Controls Row */}
-            //     <div className="flex justify-end">
-            //       {quantity === 0 ? (
-            //         <Button onClick={() => handleAddToCart(product)}>
-            //           Add to Cart
-            //         </Button>
-            //       ) : (
-            //         <div className="flex items-center space-x-2">
-            //           <Button variant="outline" size="icon" onClick={() => handleQuantityChange(product._id, quantity - 1)}>
-            //             <Minus className="h-4 w-4" />
-            //           </Button>
-            //           <Input
-            //             type="number"
-            //             min="1"
-            //             value={quantity}
-            //             onChange={(e) => handleQuantityChange(product._id, parseInt(e.target.value, 10))}
-            //             className="w-16 text-center"
-            //           />
-            //           <Button variant="outline" size="icon" onClick={() => handleQuantityChange(product._id, quantity + 1)}>
-            //             <Plus className="h-4 w-4" />
-            //           </Button>
-            //         </div>
-            //       )}
-            //     </div>
-            //   </div>
-            // </Card>
             <ProductCard key={product._id} product={product} onAddToCart={handleAddToCart} />
           );
         })}

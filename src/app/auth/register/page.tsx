@@ -35,10 +35,25 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       setError(null);
-      await api.post('/users/register', formData);
-      router.push('/auth/login');
+      
+      const response = await api.post('/users/register', formData);
+      
+      if (response.ok) {
+        router.push('/auth/login');
+      } else {
+        // Handle error response
+        const errorData = await response.json();
+        setError({
+          message: errorData.message || 'Registration failed',
+          errors: errorData.errors || []
+        });
+      }
     } catch (err: any) {
-      setError(err.response?.data || { message: 'Registration failed' });
+      console.error('Registration error:', err);
+      setError({
+        message: 'Registration failed. Please try again.',
+        errors: []
+      });
     } finally {
       setIsLoading(false);
     }

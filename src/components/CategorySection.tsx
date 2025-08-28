@@ -15,15 +15,20 @@ export default function CategorySection() {
     const fetchProducts = async () => {
       try {
         const response = await api.get('/products');
-        const grouped = response.data.products.reduce((acc: Record<string, Product[]>, product: Product) => {
-          const categoryName = typeof product.category === 'string' 
-            ? product.category 
-            : product.category?.name || 'Uncategorized';
-          if (!acc[categoryName]) acc[categoryName] = [];
-          acc[categoryName].push(product);
-          return acc;
-        }, {});
-        setProductsByCategory(grouped);
+        if (response.ok) {
+          const data = await response.json();
+          const grouped = data.products.reduce((acc: Record<string, Product[]>, product: Product) => {
+            const categoryName = typeof product.category === 'string' 
+              ? product.category 
+              : product.category?.name || 'Uncategorized';
+            if (!acc[categoryName]) acc[categoryName] = [];
+            acc[categoryName].push(product);
+            return acc;
+          }, {});
+          setProductsByCategory(grouped);
+        } else {
+          setError('Failed to load products');
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load products');
       } finally {

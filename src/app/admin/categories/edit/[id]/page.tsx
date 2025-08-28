@@ -39,23 +39,21 @@ export default function EditCategoryPage() {
         setIsLoading(true);
         console.log('Fetching category:', id);
         const response = await api.get(`/categories/${id}`);
-        const categoryData = response.data;
-        setCategory(categoryData);
-        setFormData({
-          name: categoryData.name,
-          description: categoryData.description || '',
-          isActive: categoryData.isActive,
-        });
+        if (response.ok) {
+          const categoryData = await response.json();
+          setCategory(categoryData);
+          setFormData({
+            name: categoryData.name,
+            description: categoryData.description || '',
+            isActive: categoryData.isActive,
+          });
+        } else {
+          toast.error('Category not found');
+          router.push('/admin/categories');
+        }
       } catch (error: any) {
         console.error('Error fetching category:', error);
-        if (error.response?.status === 404) {
-          toast.error('Category not found');
-        } else if (error.response?.status === 401) {
-          toast.error('Authentication required');
-          router.push('/auth/login');
-        } else {
-          toast.error('Failed to fetch category');
-        }
+        toast.error('Failed to fetch category');
         router.push('/admin/categories');
       } finally {
         setIsLoading(false);
@@ -72,17 +70,17 @@ export default function EditCategoryPage() {
     setIsLoading(true);
 
     try {
-      await api.put(`/categories/${id}`, formData);
-      toast.success('Category updated successfully');
-      router.push('/admin/categories');
+      const response = await api.put(`/categories/${id}`, formData);
+      if (response.ok) {
+        toast.success('Category updated successfully');
+        router.push('/admin/categories');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to update category');
+      }
     } catch (error: any) {
       console.error('Error updating category:', error);
-      if (error.response?.status === 401) {
-        toast.error('Authentication required');
-        router.push('/auth/login');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to update category');
-      }
+      toast.error('Failed to update category');
     } finally {
       setIsLoading(false);
     }

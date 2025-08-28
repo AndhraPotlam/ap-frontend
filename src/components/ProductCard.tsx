@@ -2,18 +2,20 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, AlertTriangle } from 'lucide-react';
 import { Product } from '@/types';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProductCardProps {
-  product: Product;
+  product: Product & { imageUrlWarning?: string };
   onAddToCart: (product: Product, quantity: number) => void;
 }
 
 export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [quantity, setQuantity] = useState(0);
+  const [imageError, setImageError] = useState(false);
 
   const handleIncrement = () => {
     setQuantity(prev => prev + 1);
@@ -39,16 +41,31 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
     }
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   return (
     <Card className="h-full shadow-md">
       <div className="flex flex-col">
+        {/* S3 Configuration Warning */}
+        {product.imageUrlWarning && (
+          <Alert className="mb-2 mx-2 mt-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              {product.imageUrlWarning}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="flex flex-row items-center gap-4 h-24">
           <div className="w-24 sm:w-32 aspect-square relative shrink-0">
             <Image
-              src={product.imageUrl || '/placeholder.png'}
+              src={imageError ? '/placeholder.png' : (product.imageUrl || '/placeholder.png')}
               alt={product.name}
               fill
               className="object-cover rounded-lg"
+              onError={handleImageError}
             />
           </div>
           <div className="flex-1 min-w-0">

@@ -5,21 +5,20 @@ import type { NextRequest } from 'next/server';
 const PUBLIC_PATHS = [
   '/auth/login',
   '/auth/register',
+  '/auth/signup',
   '/auth/forgot-password',
 ];
 
 // Add paths that require admin access
 const ADMIN_PATHS = [
   '/admin',
-  '/admin/inventory',
-  '/admin/categories',
 ];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token');
   const role = request.cookies.get('role')?.value;
-  console.log('MIDDLEWARE:', { pathname, token: token?.value });
+
   // Handle RSC requests
   if (request.nextUrl.searchParams.has('_rsc')) {
     return NextResponse.next({
@@ -35,25 +34,9 @@ export function middleware(request: NextRequest) {
   // Check if it's an admin path
   const isAdminPath = ADMIN_PATHS.some(path => pathname.startsWith(path));
 
-  // If user is logged in and tries to access auth pages, redirect to home
-  if (token && isPublicPath) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
   // If no token and trying to access protected route (except public paths)
   if (!token && !isPublicPath) {
-    // Don't redirect if already on login page to prevent loops
-    if (pathname !== '/auth/login') {
-      const response = NextResponse.redirect(new URL('/auth/login', request.url));
-      // Clear cookies only if they exist and we're redirecting
-      if (request.cookies.get('token')) {
-        response.cookies.delete('token');
-      }
-      if (request.cookies.get('role')) {
-        response.cookies.delete('role');
-      }
-      return response;
-    }
+    return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
   // If trying to access admin routes without admin role

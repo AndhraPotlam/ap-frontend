@@ -44,15 +44,15 @@ export default function CategoriesPage() {
       
       try {
         const response = await api.get('/categories');
-        setCategories(response.data || []);
-      } catch (error: any) {
-        console.error('Error fetching categories:', error);
-        if (error.response?.status === 401) {
-          toast.error('Authentication required');
-          router.push('/auth/login');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data || []);
         } else {
           toast.error('Failed to fetch categories');
         }
+      } catch (error: any) {
+        console.error('Error fetching categories:', error);
+        toast.error('Failed to fetch categories');
       } finally {
         setIsLoading(false);
       }
@@ -71,17 +71,16 @@ export default function CategoriesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/categories/${id}`);
-      setCategories(categories.filter(category => category._id !== id));
-      toast.success('Category deleted successfully');
-    } catch (error: any) {
-      console.error('Error deleting category:', error);
-      if (error.response?.status === 401) {
-        toast.error('Authentication required');
-        router.push('/auth/login');
+      const response = await api.delete(`/categories/${id}`);
+      if (response.ok) {
+        setCategories(categories.filter(category => category._id !== id));
+        toast.success('Category deleted successfully');
       } else {
         toast.error('Failed to delete category');
       }
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      toast.error('Failed to delete category');
     }
   };
 

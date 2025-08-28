@@ -44,18 +44,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           api.get('/categories')
         ]);
         
-        const product = productResponse.data;
-        setCategories(categoriesResponse.data);
-        
-        setFormData({
-          name: product.name,
-          description: product.description,
-          category: product.category._id,
-          price: product.price.toString(),
-          stock: product.stock.toString(),
-          imageUrl: product.imageUrl,
-          isActive: product.isActive,
-        });
+        if (productResponse.ok && categoriesResponse.ok) {
+          const product = await productResponse.json();
+          const categoriesData = await categoriesResponse.json();
+          setCategories(categoriesData);
+          
+          setFormData({
+            name: product.name,
+            description: product.description,
+            category: product.category._id,
+            price: product.price.toString(),
+            stock: product.stock.toString(),
+            imageUrl: product.imageUrl,
+            isActive: product.isActive,
+          });
+        } else {
+          toast.error('Failed to fetch product data');
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Failed to fetch product data');
@@ -78,24 +83,28 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         const formData = new FormData();
         formData.append('image', file);
         
-        const response = await api.post('/upload/image', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        const response = await api.postForm('/upload/image', formData);
         
-        // Update form data with the actual S3 URL
-        setFormData(prev => ({
-          ...prev,
-          imageUrl: response.data.imageUrl
-        }));
-        setImageError(false);
-        setSelectedFile(null);
-        e.target.value = ''; // Reset the file input
-        toast.success('Image uploaded successfully');
+        if (response.ok) {
+          const data = await response.json();
+          // Update form data with the actual S3 URL
+          setFormData(prev => ({
+            ...prev,
+            imageUrl: data.imageUrl
+          }));
+          setImageError(false);
+          setSelectedFile(null);
+          e.target.value = ''; // Reset the file input
+          toast.success('Image uploaded successfully');
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.message || 'Failed to upload image');
+          e.target.value = '';
+          setSelectedFile(null);
+        }
       } catch (error: any) {
         console.error('Error uploading image:', error);
-        toast.error(error.response?.data?.message || 'Failed to upload image');
+        toast.error('Failed to upload image');
         // Reset the file input
         e.target.value = '';
         setSelectedFile(null);
@@ -114,12 +123,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         stock: parseInt(formData.stock),
       };
 
-      await api.put(`/products/${id}`, productData);
-      toast.success('Product updated successfully');
-      router.push('/admin/inventory');
+      const response = await api.put(`/products/${id}`, productData);
+      if (response.ok) {
+        toast.success('Product updated successfully');
+        router.push('/admin/inventory');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to update product');
+      }
     } catch (error: any) {
       console.error('Error updating product:', error);
-      toast.error(error.response?.data?.message || 'Failed to update product');
+      toast.error('Failed to update product');
     } finally {
       setIsLoading(false);
     }

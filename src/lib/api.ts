@@ -1,52 +1,121 @@
-import axios from 'axios';
+// API base URL - you can change this to your backend URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
+// Token handling functions using cookies
+export const tokenUtils = {
+  getToken: (): string | null => {
+    if (typeof window !== 'undefined') {
+      const cookies = document.cookie.split(';');
+      const tokenCookie = cookies.find(cookie => 
+        cookie.trim().startsWith('token=')
+      );
+      return tokenCookie ? tokenCookie.split('=')[1] : null;
+    }
+    return null;
   },
-  // Add specific config for Vercel deployment
-  ...(process.env.VERCEL && {
-    headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
+  
+  setToken: (token: string): void => {
+    if (typeof window !== 'undefined') {
+      // Set cookie with httpOnly: false so JavaScript can access it
+      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Strict`;
     }
-  })
-});
-
-// Add request interceptor
-api.interceptors.request.use(
-  (config) => {
-    // Add timestamp to prevent caching in Vercel
-    if (process.env.VERCEL) {
-      config.params = { 
-        ...config.params,
-        _t: Date.now() 
-      };
-    }
-    return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // Use window.location for hard redirect to prevent caching
-      if (process.env.VERCEL) {
-        window.location.href = '/auth/login';
-        return;
-      }
-      // For local development, use router
-      window.location.href = '/auth/login';
+  
+  removeToken: (): void => {
+    if (typeof window !== 'undefined') {
+      // Remove cookie by setting it to expire in the past
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
-    return Promise.reject(error);
   }
-);
+};
+
+// Generic CRUD operations
+export const api = {
+  // GET request
+  get: async <T>(url: string, params?: any): Promise<Response> => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    return await fetch(`${API_BASE_URL}${url}${queryString}`, {
+      method: 'GET',
+      headers,
+      credentials: 'include', // Include cookies in requests
+    });
+  },
+
+  // POST request
+  post: async <T>(url: string, data?: any): Promise<Response> => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    return await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include', // Include cookies in requests
+    });
+  },
+
+  // POST form data (for file uploads)
+  postForm: async <T>(url: string, formData: FormData): Promise<Response> => {
+    const token = tokenUtils.getToken();
+    const headers: HeadersInit = {};
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    return await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include', // Include cookies in requests
+    });
+  },
+
+  // PUT request
+  put: async <T>(url: string, data?: any): Promise<Response> => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    return await fetch(`${API_BASE_URL}${url}`, {
+      method: 'PUT',
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include', // Include cookies in requests
+    });
+  },
+
+  // PATCH request
+  patch: async <T>(url: string, data?: any): Promise<Response> => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    return await fetch(`${API_BASE_URL}${url}`, {
+      method: 'PATCH',
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include', // Include cookies in requests
+    });
+  },
+
+  // DELETE request
+  delete: async <T>(url: string): Promise<Response> => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    return await fetch(`${API_BASE_URL}${url}`, {
+      method: 'DELETE',
+      headers,
+      credentials: 'include', // Include cookies in requests
+    });
+  },
+};
 
 export default api;
