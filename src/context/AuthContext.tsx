@@ -121,8 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // If user is authenticated and tries to access auth pages, redirect to home
     if (isAuthenticated && isPublicPath) {
-      console.log('🔄 Redirecting authenticated user from auth page to home');
-      router.push('/');
+      console.log('🔄 AuthContext: Redirecting authenticated user from auth page to home');
+      console.log('📍 Current pathname in AuthContext:', pathname);
+      
+      // Add a small delay to avoid conflicts with manual redirect
+      setTimeout(() => {
+        if (pathname === '/auth/login') {
+          console.log('🔄 AuthContext: Executing redirect...');
+          router.push('/');
+        }
+      }, 500);
       return;
     }
 

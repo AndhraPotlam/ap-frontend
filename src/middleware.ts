@@ -34,6 +34,11 @@ export function middleware(request: NextRequest) {
   // Check if it's an admin path
   const isAdminPath = ADMIN_PATHS.some(path => pathname.startsWith(path));
 
+  // If user is authenticated and tries to access auth pages, redirect to home
+  if (token && isPublicPath) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   // If no token and trying to access protected route (except public paths)
   if (!token && !isPublicPath) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
