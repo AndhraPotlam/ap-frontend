@@ -15,42 +15,15 @@ import api from '@/lib/api';
 export default function LoginPage() {
   const router = useRouter();
   const { checkAuth, isAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Check auth state only once on mount
-  useEffect(() => {
-    const checkAuthState = async () => {
-      try {
-        const auth = await checkAuth();
-        console.log("auth:", auth);
-        if (auth) {
-          console.log("redirecting to home from login page");
-          router.replace('/');
-        }
-      } catch (err) {
-        console.error('Auth check error:', err);
-      } finally {
-        setIsCheckingAuth(false);
-      }
-    };
-
-    checkAuthState();
-  }, []); // Empty dependency array means this runs once on mount
-
-  // Don't render the form while checking auth
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Removed redundant auth check - AuthContext already handles this
+  // This prevents multiple auth checks and improves performance
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

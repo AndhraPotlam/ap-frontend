@@ -32,7 +32,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#000000" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/andhrapotlamLogo" />
+        <link rel="apple-touch-icon" href="/andhrapotlamLogo.jpeg" />
       </head>
       <body className={`${inter.className} min-h-screen flex flex-col text-base-content bg-base-100`}>
         <AuthProvider>
