@@ -61,8 +61,8 @@ export default function LoginPage() {
           toast.success('Login successful!');
           console.log('🚀 Login successful, redirecting...');
           
-          // Simple redirect - middleware will handle the actual navigation
-          router.push('/');
+          // Use direct navigation to ensure middleware runs
+          window.location.href = '/';
         } else {
           console.error('❌ Auth check failed after login');
           setError('Failed to authenticate after login. Please try again.');
