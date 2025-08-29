@@ -86,35 +86,10 @@ export default function LoginPage() {
         
         if (isAuthenticated) {
           toast.success('Login successful!');
-          console.log('🚀 Redirecting to home...');
-          console.log('📍 Current pathname before redirect:', window.location.pathname);
+          console.log('🚀 Login successful, redirecting...');
           
-          // Try multiple navigation methods
-          try {
-            // Method 1: router.push
-            console.log('🔄 Trying router.push...');
-            await router.push('/');
-            console.log('✅ Router.push completed');
-          } catch (error) {
-            console.error('❌ Router.push failed:', error);
-          }
-          
-          // Method 2: Check if navigation worked
-          setTimeout(() => {
-            console.log('📍 Pathname after 1 second:', window.location.pathname);
-            if (window.location.pathname === '/auth/login') {
-              console.log('🔄 Router.push failed, trying window.location...');
-              window.location.href = '/';
-            }
-          }, 1000);
-          
-          // Method 3: Force navigation after 2 seconds
-          setTimeout(() => {
-            if (window.location.pathname === '/auth/login') {
-              console.log('🔄 Force navigation with window.location.replace...');
-              window.location.replace('/');
-            }
-          }, 2000);
+          // Simple redirect - middleware will handle the actual navigation
+          router.push('/');
         } else {
           console.error('❌ Auth check failed after login');
           setError('Failed to authenticate after login. Please try again.');

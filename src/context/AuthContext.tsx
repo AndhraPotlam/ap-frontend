@@ -102,26 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
   }, []); // Empty dependency array means this runs once on mount
 
-  // Handle auth redirects
-  useEffect(() => {
-    if (!isInitialized || isLoading) return;
-
-    const isPublicPath = pathname.startsWith('/auth/');
-    const isAdminPath = pathname.startsWith('/admin/');
-
-    console.log('🔄 Auth redirect check:', {
-      isInitialized,
-      isLoading,
-      isAuthenticated,
-      pathname,
-      isPublicPath,
-      isAdminPath,
-      userRole: user?.role
-    });
-
-    // Removed redirect logic - letting middleware handle all redirects
-    // This prevents conflicts between client-side and server-side redirects
-  }, [isInitialized, isAuthenticated, pathname, router, isLoading, user?.role]);
+  // Removed auth redirect useEffect - letting middleware handle all redirects
+  // This prevents conflicts and reduces unnecessary re-renders
 
   // Don't render children until auth is initialized
   if (!isInitialized) {
