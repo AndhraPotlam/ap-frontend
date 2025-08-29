@@ -119,35 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userRole: user?.role
     });
 
-    // If user is authenticated and tries to access auth pages, redirect to home
-    if (isAuthenticated && isPublicPath) {
-      console.log('🔄 AuthContext: Redirecting authenticated user from auth page to home');
-      console.log('📍 Current pathname in AuthContext:', pathname);
-      
-      // Add a small delay to avoid conflicts with manual redirect
-      setTimeout(() => {
-        if (pathname === '/auth/login') {
-          console.log('🔄 AuthContext: Executing redirect...');
-          window.location.href = '/';
-          console.log('🔄 AuthContext: Redirect executed');
-        }
-      }, 500);
-      return;
-    }
-
-    // If user is not authenticated and tries to access protected routes, redirect to login
-    if (!isAuthenticated && !isPublicPath) {
-      console.log('🔄 Redirecting unauthenticated user to login');
-      router.push('/auth/login');
-      return;
-    }
-
-    // If user is not admin and tries to access admin routes, redirect to home
-    if (isAuthenticated && isAdminPath && user?.role !== 'admin') {
-      console.log('🔄 Redirecting non-admin user from admin page to home');
-      router.push('/');
-      return;
-    }
+    // Removed redirect logic - letting middleware handle all redirects
+    // This prevents conflicts between client-side and server-side redirects
   }, [isInitialized, isAuthenticated, pathname, router, isLoading, user?.role]);
 
   // Don't render children until auth is initialized
