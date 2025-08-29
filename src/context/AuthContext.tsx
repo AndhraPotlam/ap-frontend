@@ -128,7 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTimeout(() => {
         if (pathname === '/auth/login') {
           console.log('🔄 AuthContext: Executing redirect...');
-          router.push('/');
+          window.location.href = '/';
+          console.log('🔄 AuthContext: Redirect executed');
         }
       }, 500);
       return;
