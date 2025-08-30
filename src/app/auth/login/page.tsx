@@ -22,6 +22,14 @@ export default function LoginPage() {
     password: ''
   });
 
+  // Client-side redirect check for authenticated users
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('🔄 Login page: User is authenticated, redirecting to home');
+      window.location.href = '/';
+    }
+  }, [isAuthenticated]);
+
   // Removed redundant auth check - AuthContext already handles this
   // This prevents multiple auth checks and improves performance
 
@@ -59,10 +67,8 @@ export default function LoginPage() {
         
         if (isAuthenticated) {
           toast.success('Login successful!');
-          console.log('🚀 Login successful, redirecting...');
-          
-          // Use direct navigation to ensure middleware runs
-          window.location.href = '/';
+          console.log('🚀 Login successful, redirect will happen automatically');
+          // Redirect is handled by useEffect above
         } else {
           console.error('❌ Auth check failed after login');
           setError('Failed to authenticate after login. Please try again.');

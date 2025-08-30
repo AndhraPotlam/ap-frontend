@@ -19,12 +19,15 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token');
   const role = request.cookies.get('role')?.value;
 
-  // Debug logging
-  console.log('🔍 Middleware check:', {
+  // Aggressive debug logging
+  console.log('🚨 MIDDLEWARE TRIGGERED:', {
     pathname,
     hasToken: !!token,
+    tokenValue: token?.value,
     role,
-    url: request.url
+    url: request.url,
+    method: request.method,
+    headers: Object.fromEntries(request.headers.entries())
   });
 
   // Handle RSC requests
@@ -46,13 +49,17 @@ export function middleware(request: NextRequest) {
   console.log('🔍 Middleware path checks:', {
     isPublicPath,
     isAdminPath,
-    pathname
+    pathname,
+    PUBLIC_PATHS,
+    ADMIN_PATHS
   });
 
   // If user is authenticated and tries to access auth pages, redirect to home
   if (token && isPublicPath) {
     console.log('🔄 Middleware: Authenticated user on auth page, redirecting to home');
-    return NextResponse.redirect(new URL('/', request.url));
+    const response = NextResponse.redirect(new URL('/', request.url));
+    console.log('🔄 Middleware: Redirect response created:', response);
+    return response;
   }
 
   // If no token and trying to access protected route (except public paths)
