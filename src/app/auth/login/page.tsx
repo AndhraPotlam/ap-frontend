@@ -22,14 +22,6 @@ export default function LoginPage() {
     password: ''
   });
 
-  // Client-side redirect check for authenticated users
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log('🔄 Login page: User is authenticated, redirecting to home');
-      window.location.href = '/';
-    }
-  }, [isAuthenticated]);
-
   // Removed redundant auth check - AuthContext already handles this
   // This prevents multiple auth checks and improves performance
 
