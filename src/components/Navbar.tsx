@@ -21,10 +21,12 @@ import {
   Settings
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, isAdmin, logout, isLoading } = useAuth();
+  const { totalItems } = useCart();
 
   return (
     <nav className="bg-white shadow-sm">
@@ -47,6 +49,16 @@ export default function Navbar() {
           <div className="flex items-center">
             {!isLoading && (
               <>
+                {/* Cart Icon */}
+                <Link href="/cart" className="relative p-2 mr-4">
+                  <ShoppingCart className="h-6 w-6 text-gray-600" />
+                  {totalItems > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {totalItems}
+                    </span>
+                  )}
+                </Link>
+                
                 {user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -55,24 +67,8 @@ export default function Navbar() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {isAdmin && (
-                        <>
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin">Dashboard</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/products">Products</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/categories">Categories</Link>
-                          </DropdownMenuItem>
-                        </>
-                      )}
                       <DropdownMenuItem asChild>
-                        <Link href="/profile">Profile</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/orders">Orders</Link>
+                        <Link href="/dashboard">Dashboard</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={logout}>
                         Logout

@@ -22,16 +22,31 @@ interface CartItem {
   price: number;
 }
 
+interface AppliedCoupon {
+  coupon: {
+    _id: string;
+    code: string;
+    name?: string;
+    discountType?: string;
+    discountValue?: number;
+  };
+  discountAmount?: number;
+  discount?: number; // For cart page structure
+  finalAmount?: number; // For cart page structure
+}
+
 interface CartProps {
   showBackButton?: boolean;
   showCheckout?: boolean;
   items?: CartItem[];
   onQuantityChange?: (productId: string, quantity: number) => void;
   onRemoveItem?: (productId: string) => void;
-  onSave?: () => void;
   isEditMode?: boolean;
   isLoading?: boolean;
   totalPrice?: number;
+  appliedCoupon?: AppliedCoupon;
+  isCartPage?: boolean;
+  onCheckoutClick?: () => void;
 }
 
 export default function Cart({ 
@@ -40,10 +55,12 @@ export default function Cart({
   items,
   onQuantityChange,
   onRemoveItem,
-  onSave,
   isEditMode = false,
   isLoading = false,
-  totalPrice: externalTotalPrice
+  totalPrice: externalTotalPrice,
+  appliedCoupon,
+  isCartPage = false,
+  onCheckoutClick
 }: CartProps) {
   const { cartItems, updateQuantity, removeFromCart, totalPrice: cartTotalPrice, clearCart } = useCart();
   const { user } = useAuth();
@@ -54,6 +71,8 @@ export default function Cart({
   const totalPrice = externalTotalPrice || cartTotalPrice;
 
   const handleCheckout = async () => {
+    if (isSubmitting) return; // Prevent multiple clicks
+    
     if (!user) {
       toast.error('Please login to place an order');
       router.push('/auth/login');
@@ -65,25 +84,34 @@ export default function Cart({
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      const orderData = {
-        items: displayItems.map(item => ({
-          product: item.product._id,
-          quantity: item.quantity,
-          price: item.product.price
-        })),
-        totalAmount: totalPrice,
-        status: 'pending'
-      };
+    setIsSubmitting(true);
 
-      const response = await api.post('/orders', orderData);
-      toast.success('Order placed successfully!');
-      clearCart();
-      router.push('/orders');
+    try {
+      // Use custom checkout handler if provided
+      if (onCheckoutClick) {
+        onCheckoutClick();
+        return;
+      }
+
+      // Navigate based on current page
+      if (isCartPage) {
+        // On cart page, go to checkout
+        if (appliedCoupon) {
+          // Store applied coupon in sessionStorage for checkout page
+          sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
+        }
+        router.push('/checkout');
+      } else {
+        // On other pages (like main page), go to cart
+        if (appliedCoupon) {
+          // Store applied coupon in sessionStorage for cart page
+          sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
+        }
+        router.push('/cart');
+      }
     } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error('Failed to place order. Please try again.');
+      console.error('Navigation error:', error);
+      toast.error('Failed to navigate. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -185,7 +213,7 @@ export default function Cart({
         </CardContent>
       </Card>
 
-      {showCheckout && displayItems.length > 0 && (
+      {showCheckout && displayItems.length > 0 && !isEditMode && (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Order Summary</CardTitle>
@@ -196,35 +224,34 @@ export default function Cart({
                 <span>Subtotal</span>
                 <span>₹{totalPrice}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>Free</span>
-              </div>
+              
+              {appliedCoupon && (appliedCoupon.discountAmount || appliedCoupon.discount || appliedCoupon.finalAmount) && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({appliedCoupon.coupon?.code || 'COUPON'})</span>
+                  <span>-₹{(appliedCoupon.discountAmount || appliedCoupon.discount || appliedCoupon.finalAmount || 0).toFixed(2)}</span>
+                </div>
+              )}
+              
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>₹{totalPrice}</span>
+                <span>₹{(() => {
+                  const discountAmount = appliedCoupon?.discountAmount || appliedCoupon?.discount || appliedCoupon?.finalAmount || 0;
+                  return discountAmount > 0 ? (totalPrice - discountAmount).toFixed(2) : totalPrice;
+                })()}</span>
               </div>
-              {isEditMode ? (
-                <Button 
-                  className="w-full" 
-                  onClick={onSave}
-                  disabled={isLoading || isSubmitting || displayItems.length === 0}
-                >
-                  {isLoading || isSubmitting ? 'Saving Changes...' : 'Save Changes'}
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full" 
-                  onClick={handleCheckout}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Placing Order...' : 'Proceed to Checkout'}
-                </Button>
-              )}
+              
+              <Button 
+                className="w-full" 
+                onClick={handleCheckout}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Loading...' : (isCartPage ? 'Proceed to Checkout' : 'Proceed to Cart')}
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 } 

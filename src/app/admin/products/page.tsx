@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -95,6 +95,18 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto py-6">
+      {/* Back to Dashboard Button */}
+      <div className="mb-6">
+        <Button 
+          variant="outline" 
+          onClick={() => router.push('/dashboard')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Products Management</h1>
         <Button onClick={() => router.push('/admin/products/add')}>

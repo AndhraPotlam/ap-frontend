@@ -1,10 +1,12 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { Product } from '@/types';
 import ProductList from '@/components/ProductList';
 import Cart from '@/components/Cart';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 
@@ -18,6 +20,8 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [s3Warning, setS3Warning] = useState(false);
   const { cartItems } = useCart();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -86,7 +90,17 @@ export default function HomePage() {
           <ProductList products={products} />
         </div>
         <div className="hidden md:block md:w-80 md:col-span-1">
-          <Cart showBackButton={false} showCheckout={true} />
+          <Cart 
+            showBackButton={false} 
+            showCheckout={true}
+            onCheckoutClick={() => {
+              if (isAuthenticated) {
+                router.push('/dashboard');
+              } else {
+                router.push('/auth/login');
+              }
+            }}
+          />
         </div>
       </div>
     </div>

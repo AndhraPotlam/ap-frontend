@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -104,6 +104,18 @@ export default function CategoriesPage() {
 
   return (
     <div className="container mx-auto py-6">
+      {/* Back to Dashboard Button */}
+      <div className="mb-6">
+        <Button 
+          variant="outline" 
+          onClick={() => router.push('/dashboard')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Category Management</h1>
         <Button onClick={() => router.push('/admin/categories/add')}>
