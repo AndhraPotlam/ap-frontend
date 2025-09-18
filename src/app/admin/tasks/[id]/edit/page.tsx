@@ -30,9 +30,9 @@ export default function EditTaskPage() {
     status: 'pending',
     isRecurring: false,
     recurringPattern: {
-      frequency: 'daily',
+      frequency: 'daily' as 'daily' | 'weekly' | 'monthly' | 'custom',
       interval: 1,
-      daysOfWeek: [],
+      daysOfWeek: [] as number[],
       dayOfMonth: 1
     }
   });
@@ -82,10 +82,10 @@ export default function EditTaskPage() {
           tags: task.tags ? task.tags.join(', ') : '',
           status: task.status || 'pending',
           isRecurring: task.isRecurring || false,
-          recurringPattern: task.recurringPattern || {
+          recurringPattern: (task.recurringPattern as any) || {
             frequency: 'daily',
             interval: 1,
-            daysOfWeek: [],
+            daysOfWeek: [] as number[],
             dayOfMonth: 1
           }
         });
