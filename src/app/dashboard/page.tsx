@@ -11,7 +11,8 @@ import {
   Tag, 
   Percent, 
   ShoppingCart,
-  Home
+  Home,
+  ClipboardList
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -169,6 +170,21 @@ export default function DashboardPage() {
                 <CardContent>
                   <p className="text-sm text-gray-600">
                     Set up automatic discount rules based on order value, quantity, etc.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/tasks')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <ClipboardList className="h-8 w-8 text-purple-600" />
+                  <div className="ml-4">
+                    <CardTitle className="text-lg">Task Management</CardTitle>
+                    <CardDescription>Hotel task management system</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">
+                    Create, assign, and track daily, weekly, and monthly tasks for hotel operations.
                   </p>
                 </CardContent>
               </Card>
