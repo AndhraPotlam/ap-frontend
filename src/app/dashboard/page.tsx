@@ -12,7 +12,8 @@ import {
   Percent, 
   ShoppingCart,
   Home,
-  ClipboardList
+  ClipboardList,
+  Wallet
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -170,6 +171,21 @@ export default function DashboardPage() {
                 <CardContent>
                   <p className="text-sm text-gray-600">
                     Set up automatic discount rules based on order value, quantity, etc.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/expenses')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <Wallet className="h-8 w-8 text-emerald-600" />
+                  <div className="ml-4">
+                    <CardTitle className="text-lg">Expense Management</CardTitle>
+                    <CardDescription>Track expenses and expense categories</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">
+                    Record daily expenses (cash/online), filter by date, and manage expense categories.
                   </p>
                 </CardContent>
               </Card>

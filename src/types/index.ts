@@ -185,3 +185,46 @@ export interface TaskStats {
     count: number;
   }>;
 }
+
+// Expense Management Types
+export interface ExpenseCategory {
+  _id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ExpensePaymentType = 'cash' | 'online';
+
+export interface Expense {
+  _id: string;
+  amount: number;
+  paymentType: ExpensePaymentType;
+  paidBy: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | string;
+  category: ExpenseCategory | string;
+  date: string; // ISO date string
+  description?: string;
+  notes?: string;
+  attachments?: string[];
+  createdBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
