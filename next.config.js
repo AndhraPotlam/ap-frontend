@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  swcMinify: true,
   eslint: {
     // Ignore ESLint errors during builds
     ignoreDuringBuilds: true,
@@ -67,6 +68,9 @@ const nextConfig = {
     ];
   },
   experimental: {
+    
+    legacyBrowsers: true,
+    browsersListForSwc: true,
     serverActions: {
       // Allow localhost in dev, current Vercel preview URL, and an explicit production URL via env
       allowedOrigins: [
