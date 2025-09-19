@@ -16,15 +16,21 @@ export const tokenUtils = {
   
   setToken: (token: string): void => {
     if (typeof window !== 'undefined') {
-      // Set cookie with httpOnly: false so JavaScript can access it
-      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Strict`;
+      // Set cookie with Safari-compatible settings
+      const isProduction = process.env.NODE_ENV === 'production';
+      const sameSite = isProduction ? 'None' : 'Lax';
+      const secure = isProduction ? '; Secure' : '';
+      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=${sameSite}${secure}`;
     }
   },
   
   removeToken: (): void => {
     if (typeof window !== 'undefined') {
-      // Remove cookie by setting it to expire in the past
-      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      // Remove cookie by setting it to expire in the past with Safari-compatible settings
+      const isProduction = process.env.NODE_ENV === 'production';
+      const sameSite = isProduction ? 'None' : 'Lax';
+      const secure = isProduction ? '; Secure' : '';
+      document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=${sameSite}${secure}`;
     }
   }
 };

@@ -35,8 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setIsAuthenticated(false);
     tokenUtils.removeToken();
-    // Clear role cookie
-    document.cookie = 'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    // Clear role cookie with Safari-compatible settings
+    const isProduction = process.env.NODE_ENV === 'production';
+    const sameSite = isProduction ? 'None' : 'Lax';
+    const secure = isProduction ? '; Secure' : '';
+    document.cookie = `role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=${sameSite}${secure}`;
   };
 
   const checkAuth = async () => {
@@ -53,8 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setUser(userData);
         setIsAuthenticated(true);
-        // Set role cookie for middleware
-        document.cookie = `role=${userData.role}; path=/; max-age=86400; SameSite=Strict`;
+        // Set role cookie for middleware with Safari-compatible settings
+        const isProduction = process.env.NODE_ENV === 'production';
+        const sameSite = isProduction ? 'None' : 'Lax';
+        const secure = isProduction ? '; Secure' : '';
+        document.cookie = `role=${userData.role}; path=/; max-age=86400; SameSite=${sameSite}${secure}`;
         console.log('✅ Auth check successful');
         return true;
       } else if (response.status === 401) {
