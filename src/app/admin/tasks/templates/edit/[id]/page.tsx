@@ -97,7 +97,7 @@ export default function EditTemplatePage() {
   const handleArrayFieldChange = (field: string, index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev].map((item: string, i: number) => 
+      [field]: (prev[field as keyof typeof prev] as string[]).map((item: string, i: number) => 
         i === index ? value : item
       )
     }));
@@ -106,14 +106,14 @@ export default function EditTemplatePage() {
   const addArrayField = (field: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: [...prev[field as keyof typeof prev], '']
+      [field]: [...(prev[field as keyof typeof prev] as string[]), '']
     }));
   };
 
   const removeArrayField = (field: string, index: number) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev].filter((_: string, i: number) => i !== index)
+      [field]: (prev[field as keyof typeof prev] as string[]).filter((_: string, i: number) => i !== index)
     }));
   };
 

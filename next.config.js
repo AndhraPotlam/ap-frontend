@@ -67,7 +67,10 @@ const nextConfig = {
     ];
   },
   experimental: {
-    serverActions: true,
+    serverActions: {
+      // Allow localhost and any Vercel deployment (preview/prod)
+      allowedOrigins: ['localhost:3000', /.*\.vercel\.app$/]
+    },
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL
