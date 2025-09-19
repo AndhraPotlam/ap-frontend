@@ -68,8 +68,12 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      // Allow localhost and any Vercel deployment (preview/prod)
-      allowedOrigins: ['localhost:3000', /.*\.vercel\.app$/]
+      // Allow localhost in dev, current Vercel preview URL, and an explicit production URL via env
+      allowedOrigins: [
+        ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
+        ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+        ...(process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : []),
+      ]
     },
   },
   env: {
