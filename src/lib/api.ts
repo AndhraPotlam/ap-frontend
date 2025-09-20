@@ -40,9 +40,14 @@ export const api = {
   // GET request
   get: async <T>(url: string, params?: any): Promise<Response> => {
     const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    const token = tokenUtils.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     return await fetch(`${API_BASE_URL}${url}${queryString}`, {
       method: 'GET',
@@ -53,9 +58,14 @@ export const api = {
 
   // POST request
   post: async <T>(url: string, data?: any): Promise<Response> => {
+    const token = tokenUtils.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     return await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
@@ -84,9 +94,14 @@ export const api = {
 
   // PUT request
   put: async <T>(url: string, data?: any): Promise<Response> => {
+    const token = tokenUtils.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     return await fetch(`${API_BASE_URL}${url}`, {
       method: 'PUT',
@@ -98,9 +113,14 @@ export const api = {
 
   // PATCH request
   patch: async <T>(url: string, data?: any): Promise<Response> => {
+    const token = tokenUtils.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     return await fetch(`${API_BASE_URL}${url}`, {
       method: 'PATCH',
@@ -112,9 +132,14 @@ export const api = {
 
   // DELETE request
   delete: async <T>(url: string): Promise<Response> => {
+    const token = tokenUtils.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     return await fetch(`${API_BASE_URL}${url}`, {
       method: 'DELETE',

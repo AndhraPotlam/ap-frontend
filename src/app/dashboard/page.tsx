@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Wallet
 } from 'lucide-react';
+import { Coins } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -100,6 +101,20 @@ export default function DashboardPage() {
           {/* Admin Options */}
           {isAdmin && (
             <>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/cashbox')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <Coins className="h-8 w-8 text-amber-600" />
+                  <div className="ml-4">
+                    <CardTitle className="text-lg">Cash Box Management</CardTitle>
+                    <CardDescription>Manage daily cash sessions and entries</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">
+                    Configure session types, create daily sessions, record cash in/out, and view summaries.
+                  </p>
+                </CardContent>
+              </Card>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/products')}>
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                   <Package className="h-8 w-8 text-indigo-600" />

@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
-import { Settings, Save, RefreshCw, Percent, Truck, CreditCard, Tag, ArrowLeft } from 'lucide-react';
+import { Settings, Save, RefreshCw, Percent, Truck, CreditCard, Tag, ArrowLeft, Coins, Plus, X } from 'lucide-react';
 
 interface Setting {
   _id: string;
@@ -31,6 +31,11 @@ export default function AdminSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  
+  // Cashbox settings
+  const [cashboxSettings, setCashboxSettings] = useState<{ sessionNames: string[] }>({ sessionNames: [] });
+  const [newSessionName, setNewSessionName] = useState('');
+  const [isSavingCashbox, setIsSavingCashbox] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -49,6 +54,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
       fetchSettings();
+      fetchCashboxSettings();
     }
   }, [isAuthenticated, isAdmin]);
 
@@ -71,6 +77,54 @@ export default function AdminSettingsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchCashboxSettings = async () => {
+    try {
+      const response = await api.get('/cashbox/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setCashboxSettings(data.settings || { sessionNames: [] });
+      }
+    } catch (error) {
+      console.error('Error fetching cashbox settings:', error);
+    }
+  };
+
+  const saveCashboxSettings = async () => {
+    setIsSavingCashbox(true);
+    try {
+      const response = await api.post('/cashbox/settings', {
+        sessionNames: cashboxSettings.sessionNames
+      });
+      if (response.ok) {
+        toast.success('Cashbox settings saved');
+      } else {
+        toast.error('Failed to save cashbox settings');
+      }
+    } catch (error) {
+      console.error('Error saving cashbox settings:', error);
+      toast.error('Failed to save cashbox settings');
+    } finally {
+      setIsSavingCashbox(false);
+    }
+  };
+
+  const addSessionName = () => {
+    if (newSessionName.trim() && !cashboxSettings.sessionNames.includes(newSessionName.trim())) {
+      setCashboxSettings(prev => ({
+        ...prev,
+        sessionNames: [...prev.sessionNames, newSessionName.trim()]
+      }));
+      setNewSessionName('');
+    }
+  };
+
+  const removeSessionName = (index: number) => {
+    setCashboxSettings(prev => ({
+      ...prev,
+      sessionNames: prev.sessionNames.filter((_, i) => i !== index)
+    }));
   };
 
   const updateSetting = (key: string, value: any) => {
@@ -332,6 +386,8 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Cashbox Settings moved to Cash Box Management section */}
       </div>
     </div>
   );

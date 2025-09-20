@@ -7,7 +7,8 @@ import {
   ShoppingCart, 
   Users, 
   Tags,
-  ArrowRight
+  ArrowRight,
+  Coins
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -34,6 +35,27 @@ export default function AdminPage() {
               onClick={() => router.push('/admin/categories')}
             >
               View Categories
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Cash Box Management */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cash Box Management</CardTitle>
+            <Coins className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Cash Sessions</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Open/close sessions, record cash in/out, and view summaries
+            </p>
+            <Button 
+              className="mt-4 w-full" 
+              onClick={() => router.push('/admin/cashbox')}
+            >
+              Manage Cash Box
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>
