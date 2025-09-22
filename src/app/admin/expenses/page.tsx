@@ -1,527 +1,828 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import api from '@/lib/api';
-import { Expense, ExpenseCategory, User } from '@/types';
-import { ArrowLeft, Plus, Filter, Search, X } from 'lucide-react';
-// Charts removed
+import { Expense, ExpenseSummary, ExpenseCategory, User } from '@/types';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Filter, 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Calendar, 
+  Settings, 
+  Eye,
+  BarChart3,
+  Wallet,
+  Users,
+  Activity,
+  Edit,
+  Trash2,
+  Receipt,
+  CreditCard,
+  Banknote
+} from 'lucide-react';
 
 export default function ExpensesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, isAdmin, isLoading } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [paymentTypeFilter, setPaymentTypeFilter] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
-  const [paidByFilter, setPaidByFilter] = useState<string>('');
-  // Date range filter
-  const [startDateFilter, setStartDateFilter] = useState<string>('');
-  const [endDateFilter, setEndDateFilter] = useState<string>('');
-  const [datePreset, setDatePreset] = useState<'today' | 'this_week' | 'this_month' | 'custom'>('this_week');
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
-  const router = useRouter();
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSummaryDetails, setShowSummaryDetails] = useState(false);
-  const toYMDLocal = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-  // duplicate removed
+  const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<string>('thisWeek');
+  const [startDate, setStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
-  const clearAllFilters = () => {
-    setSearchTerm('');
-    setPaymentTypeFilter('');
-    setCategoryFilter('');
-    setPaidByFilter('');
-    // reset to this week by default
-    const today = new Date();
-    const day = today.getDay();
-    const diffToMonday = (day + 6) % 7;
-    const start = new Date(today);
-    start.setDate(today.getDate() - diffToMonday);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    setStartDateFilter(toYMDLocal(start));
-    setEndDateFilter(toYMDLocal(end));
-    setDatePreset('this_week');
-    setShowFilters(false);
-    // Fetch unfiltered list immediately
-    api.get(`/expenses?startDate=${toYMDLocal(start)}&endDate=${toYMDLocal(end)}`).then(async (response) => {
-      if (response.ok) {
-        const data = await response.json();
-        setExpenses(data.expenses || []);
-      }
-    }).catch(() => {
-      // fallback to normal fetch
-      setTimeout(fetchExpenses, 0);
-    });
+  // URL state management
+  const updateURL = (preset: string, start?: string, end?: string) => {
+    const params = new URLSearchParams();
+    params.set('preset', preset);
+    if (start) params.set('startDate', start);
+    if (end) params.set('endDate', end);
+    router.replace(`/admin/expenses?${params.toString()}`, { scroll: false });
   };
 
-  // duplicate removed
-
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user || !isAdmin) {
-        router.push('/dashboard');
-        return;
-      }
-      // initialize date range to this week before initial fetch
-      const today = new Date();
-      const day = today.getDay();
-      const diffToMonday = (day + 6) % 7;
-      const start = new Date(today);
-      start.setDate(today.getDate() - diffToMonday);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      setStartDateFilter(toYMDLocal(start));
-      setEndDateFilter(toYMDLocal(end));
-      setDatePreset('this_week');
-      setTimeout(() => {
-        fetchInitial();
-      }, 0);
+  const loadStateFromURL = () => {
+    const preset = searchParams.get('preset') || 'thisWeek';
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    
+    console.log('Loading state from URL:', { preset, start, end, allParams: searchParams.toString() });
+    
+    // If no dates in URL, use preset to calculate them
+    if (!start || !end) {
+      const { start: calculatedStart, end: calculatedEnd } = getDateRange(preset);
+      console.log('Calculated dates from preset:', { calculatedStart, calculatedEnd });
+      setStartDate(calculatedStart);
+      setEndDate(calculatedEnd);
+    } else {
+      console.log('Using dates from URL:', { start, end });
+      setStartDate(start);
+      setEndDate(end);
     }
-  }, [user, isAdmin, authLoading, router]);
-
-  const fetchInitial = async () => {
-    await Promise.all([fetchExpenses(), fetchCategories(), fetchUsers()]);
-    setIsLoading(false);
+    
+    setDatePreset(preset);
   };
 
-  const fetchExpenses = async () => {
+  // Date preset logic
+  const getDateRange = (preset: string) => {
+    const today = new Date();
+    switch (preset) {
+      case 'today':
+        return {
+          start: format(today, 'yyyy-MM-dd'),
+          end: format(today, 'yyyy-MM-dd')
+        };
+      case 'thisWeek':
+        return {
+          start: format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'), // Monday
+          end: format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd') // Sunday
+        };
+      case 'thisMonth':
+        return {
+          start: format(startOfMonth(today), 'yyyy-MM-dd'),
+          end: format(endOfMonth(today), 'yyyy-MM-dd')
+        };
+      case 'custom':
+        return {
+          start: startDate,
+          end: endDate
+        };
+      default:
+        return {
+          start: format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+          end: format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+        };
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (paymentTypeFilter && paymentTypeFilter !== 'all') params.append('paymentType', paymentTypeFilter);
-      if (categoryFilter && categoryFilter !== 'all') params.append('category', categoryFilter);
-      if (paidByFilter && paidByFilter !== 'all') params.append('paidBy', paidByFilter);
-      if (startDateFilter) params.append('startDate', startDateFilter);
-      if (endDateFilter) params.append('endDate', endDateFilter);
-      const response = await api.get(`/expenses?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
+      const { start, end } = getDateRange(datePreset);
+      console.log('Fetching data with:', { datePreset, start, end });
+      
+      const [eRes, sumRes, catRes, userRes] = await Promise.all([
+        api.get(`/expenses?startDate=${start}&endDate=${end}&limit=10`),
+        api.get(`/expenses/summary?startDate=${start}&endDate=${end}`),
+        api.get('/expense-categories'),
+        api.get('/users')
+      ]);
+      
+      if (eRes.ok) {
+        const data = await eRes.json();
+        console.log('Expenses data received:', data);
         setExpenses(data.expenses || []);
       } else {
-        toast.error('Failed to load expenses');
+        console.error('Expenses API error:', eRes.status, await eRes.text());
       }
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      toast.error('Failed to load expenses');
-    }
-  };
+      
+      if (sumRes.ok) {
+        const data = await sumRes.json();
+        console.log('Summary data received:', data);
+        setSummary(data.summary || null);
+      } else {
+        console.error('Summary API error:', sumRes.status, await sumRes.text());
+        setSummary(null);
+      }
 
-  const fetchCategories = async () => {
-    try {
-      const response = await api.get('/expense-categories');
-      if (response.ok) {
-        const data = await response.json();
+      if (catRes.ok) {
+        const data = await catRes.json();
         setCategories(data.categories || []);
       }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
 
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get('/users');
-      if (response.ok) {
-        const data = await response.json();
+      if (userRes.ok) {
+        const data = await userRes.json();
         setUsers(data.users || []);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (authLoading || isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading expenses...</div>
-      </div>
-    );
-  }
+  // Load state from URL on mount and when URL changes
+  useEffect(() => {
+    loadStateFromURL();
+  }, [searchParams]);
+
+  // Fetch data when dependencies change
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+      if (!isAdmin) {
+        router.push('/dashboard');
+        return;
+      }
+      fetchData();
+    }
+  }, [isLoading, user, isAdmin, datePreset, startDate, endDate]);
+
+  // Additional effect to handle page visibility changes and focus (when returning from other pages)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !isLoading && user) {
+        // Page became visible again, refresh data
+        fetchData();
+      }
+    };
+
+    const handleFocus = () => {
+      if (!isLoading && user) {
+        // Page gained focus, refresh data
+        fetchData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isLoading, user, datePreset, startDate, endDate]);
+
+  const handleViewExpense = (expenseId: string) => {
+    const params = new URLSearchParams();
+    params.set('returnUrl', `/admin/expenses?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+    router.push(`/admin/expenses/${expenseId}?${params.toString()}`);
+  };
+
+  const handleEditExpense = (expenseId: string) => {
+    const params = new URLSearchParams();
+    params.set('returnUrl', `/admin/expenses?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+    router.push(`/admin/expenses/${expenseId}/edit?${params.toString()}`);
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (confirm('Are you sure you want to delete this expense?')) {
+      try {
+        const response = await api.delete(`/expenses/${expenseId}`);
+        if (response.ok) {
+          fetchData(); // Refresh data
+        }
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+      }
+    }
+  };
+
+  const getPaymentTypeIcon = (type: string) => {
+    switch (type) {
+      case 'cash': return <Banknote className="h-4 w-4" />;
+      case 'online': return <CreditCard className="h-4 w-4" />;
+      default: return <Receipt className="h-4 w-4" />;
+    }
+  };
+
+  const getPaymentTypeColor = (type: string) => {
+    switch (type) {
+      case 'cash': return 'bg-green-100 text-green-800';
+      case 'online': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-bold mb-2">Expenses</h1>
-          <p className="text-gray-600 truncate">Manage daily expenses and filters</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setShowFilters(true)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-          <Button variant="outline" onClick={() => router.push('/admin/expenses/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
-          </Button>
-          <Button variant="outline" onClick={() => router.push('/admin/expenses/categories')}>
-            Manage Expense Categories
-          </Button>
-        </div>
-      </div>
-
-      {/* Date Presets (outside filters) */}
-      <div className="mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Date Range</label>
-            <Select value={datePreset} onValueChange={(v) => {
-              const preset = (v as 'today' | 'this_week' | 'this_month' | 'custom');
-              setDatePreset(preset);
-              const today = new Date();
-              if (preset === 'today') {
-                setStartDateFilter(toYMDLocal(today));
-                setEndDateFilter(toYMDLocal(today));
-              } else if (preset === 'this_week') {
-                const day = today.getDay();
-                const diffToMonday = (day + 6) % 7;
-                const start = new Date(today);
-                start.setDate(today.getDate() - diffToMonday);
-                const end = new Date(start);
-                end.setDate(start.getDate() + 6);
-                setStartDateFilter(toYMDLocal(start));
-                setEndDateFilter(toYMDLocal(end));
-              } else if (preset === 'this_month') {
-                const start = new Date(today.getFullYear(), today.getMonth(), 1);
-                const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                setStartDateFilter(toYMDLocal(start));
-                setEndDateFilter(toYMDLocal(end));
-              } else {
-                // custom
-              }
-            }}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="this_week">This Week</SelectItem>
-                <SelectItem value="this_month">This Month</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className={`${datePreset === 'custom' ? '' : 'hidden'}`}>
-            <label className="text-sm font-medium mb-2 block">From</label>
-            <Input
-              type="date"
-              value={startDateFilter}
-              onChange={(e) => {
-                setDatePreset('custom');
-                setStartDateFilter(e.target.value);
-              }}
-            />
-          </div>
-          <div className={`${datePreset === 'custom' ? '' : 'hidden'}`}>
-            <label className="text-sm font-medium mb-2 block">To</label>
-            <Input
-              type="date"
-              value={endDateFilter}
-              onChange={(e) => {
-                setDatePreset('custom');
-                setEndDateFilter(e.target.value);
-              }}
-            />
-          </div>
-          <div className="flex gap-2 md:justify-end">
-            <Button variant="outline" onClick={fetchExpenses} className="w-full md:w-auto">Apply</Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Applied Filters Summary */}
-      {(searchTerm || (paymentTypeFilter && paymentTypeFilter !== 'all') || (categoryFilter && categoryFilter !== 'all') || (paidByFilter && paidByFilter !== 'all') || startDateFilter || endDateFilter) && (
-        <div className="mb-4">
-          <div className="text-sm text-gray-600 mb-2">Applied Filters:</div>
-          <div className="flex flex-wrap gap-2">
-            {searchTerm && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)}>
-                Search: {searchTerm}
-              </Button>
-            )}
-            {paymentTypeFilter && paymentTypeFilter !== 'all' && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)}>
-                Payment: {paymentTypeFilter}
-              </Button>
-            )}
-            {categoryFilter && categoryFilter !== 'all' && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)}>
-                Category: {categories.find(c => c._id === categoryFilter)?.name || 'Selected'}
-              </Button>
-            )}
-            {paidByFilter && paidByFilter !== 'all' && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)}>
-                Paid By: {users.find(u => u._id === paidByFilter)?.firstName || 'Selected'}
-              </Button>
-            )}
-            {(startDateFilter || endDateFilter) && (
-              <Button variant="outline" size="sm" onClick={() => setShowFilters(true)}>
-                Date: {startDateFilter || '...'} to {endDateFilter || '...'}
-              </Button>
-            )}
-            {/* Clear All button removed per request; use Filters modal to manage */}
-          </div>
-        </div>
-      )}
-
-      {/* Filters Modal (on demand) */}
-      <FiltersModal
-        open={showFilters}
-        onClose={() => setShowFilters(false)}
-      >
-        <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search expenses..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Payment Type</label>
-              <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Expense Category</label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All expense categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All expense categories</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Paid By</label>
-              <Select value={paidByFilter} onValueChange={setPaidByFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All users" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u._id} value={u._id}>{u.firstName} {u.lastName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {/* Date filters moved outside modal */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-4">
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="outline" 
-                onClick={clearAllFilters}
-              >
-                Clear All
-              </Button>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowFilters(false)} className="w-full sm:w-auto">Close</Button>
-              <Button onClick={() => { fetchExpenses(); setShowFilters(false); }} className="w-full sm:w-auto">Apply Filters</Button>
-            </div>
-          </div>
-        </div>
-      </FiltersModal>
-
-      {/* Summary (plain) */}
-      {expenses.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>Summary (Current Results)</CardTitle>
-              {/* Small screens: toggle details */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Dashboard Header */}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <Button
                 variant="outline"
                 size="sm"
-                className="lg:hidden"
-                onClick={() => setShowSummaryDetails((v) => !v)}
+                onClick={() => router.push('/admin')}
+                className="flex items-center space-x-2"
               >
-                {showSummaryDetails ? 'Hide details' : 'Show details'}
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+                  Expense Management
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1">
+                  Track and manage business expenses
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                size="sm"
+                onClick={() => router.push('/admin/expenses/categories')}
+                className="flex items-center space-x-2"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Manage Categories</span>
+                <span className="sm:hidden">Categories</span>
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  params.set('returnUrl', `/admin/expenses?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+                  router.push(`/admin/expenses/new?${params.toString()}`);
+                }}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Expense</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Compact Controls Section */}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          {/* Mobile: Stacked layout */}
+          <div className="lg:hidden space-y-3">
+            {/* Quick Actions - Mobile */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Activity className="h-4 w-4 mr-2 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">Quick Actions</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => router.push('/admin/expenses/categories')} 
+                      className="text-xs px-2 h-7"
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Categories
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        params.set('returnUrl', `/admin/expenses?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+                        router.push(`/admin/expenses/new?${params.toString()}`);
+                      }} 
+                      className="text-xs px-2 h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={fetchData} 
+                      className="text-xs px-2 h-7"
+                    >
+                      <Filter className="h-3 w-3 mr-1" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Date Range - Mobile */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center mb-3">
+                  <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                  <span className="text-sm font-medium text-gray-700">Date Range</span>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium mb-1 block text-gray-700">Select Period</label>
+                    <Select value={datePreset} onValueChange={(value) => {
+                      setDatePreset(value);
+                      if (value === 'custom') {
+                        updateURL(value, startDate, endDate);
+                      } else {
+                        const { start, end } = getDateRange(value);
+                        updateURL(value, start, end);
+                      }
+                    }}>
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Select date range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="thisWeek">This Week</SelectItem>
+                        <SelectItem value="thisMonth">This Month</SelectItem>
+                        <SelectItem value="custom">Custom Range</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100">
+                    <div className="text-xs text-blue-600 mb-1 font-medium">Selected Period</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {(() => {
+                        const { start, end } = getDateRange(datePreset);
+                        if (start === end) {
+                          return format(new Date(start), 'MMM do, yyyy');
+                        } else {
+                          return `${format(new Date(start), 'MMM do')} - ${format(new Date(end), 'MMM do, yyyy')}`;
+                        }
+                      })()}
+                    </div>
+                  </div>
+
+                  {datePreset === 'custom' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">From</label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => {
+                            setStartDate(e.target.value);
+                            updateURL(datePreset, e.target.value, endDate);
+                          }}
+                          className="w-full h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">To</label>
+                        <Input 
+                          type="date" 
+                          value={endDate} 
+                          onChange={(e) => {
+                            setEndDate(e.target.value);
+                            updateURL(datePreset, startDate, e.target.value);
+                          }}
+                          className="w-full h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Desktop: Side by side layout */}
+          <div className="hidden lg:grid lg:grid-cols-4 gap-4">
+            {/* Quick Actions - Desktop */}
+            <div className="lg:col-span-1">
+              <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center">
+                    <Activity className="h-4 w-4 mr-2 text-blue-600" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => router.push('/admin/expenses/categories')} 
+                    className="w-full justify-start text-xs h-7"
+                  >
+                    <Settings className="h-3 w-3 mr-2" />
+                    Manage Categories
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      params.set('returnUrl', `/admin/expenses?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+                      router.push(`/admin/expenses/new?${params.toString()}`);
+                    }} 
+                    className="w-full justify-start text-xs h-7"
+                  >
+                    <Plus className="h-3 w-3 mr-2" />
+                    Add Expense
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={fetchData} 
+                    className="w-full justify-start text-xs h-7"
+                  >
+                    <Filter className="h-3 w-3 mr-2" />
+                    Refresh Data
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Date Range - Desktop */}
+            <div className="lg:col-span-3">
+              <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center">
+                    <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                    Date Range
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium mb-1 block text-gray-700">Select Period</label>
+                      <Select value={datePreset} onValueChange={(value) => {
+                        setDatePreset(value);
+                        if (value === 'custom') {
+                          updateURL(value, startDate, endDate);
+                        } else {
+                          const { start, end } = getDateRange(value);
+                          updateURL(value, start, end);
+                        }
+                      }}>
+                        <SelectTrigger className="w-full h-8">
+                          <SelectValue placeholder="Select date range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="thisWeek">This Week</SelectItem>
+                          <SelectItem value="thisMonth">This Month</SelectItem>
+                          <SelectItem value="custom">Custom Range</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100">
+                      <div className="text-xs text-blue-600 mb-1 font-medium">Selected Period</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {(() => {
+                          const { start, end } = getDateRange(datePreset);
+                          if (start === end) {
+                            return format(new Date(start), 'MMM do, yyyy');
+                          } else {
+                            return `${format(new Date(start), 'MMM do')} - ${format(new Date(end), 'MMM do, yyyy')}`;
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {datePreset === 'custom' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">From Date</label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => {
+                            setStartDate(e.target.value);
+                            updateURL(datePreset, e.target.value, endDate);
+                          }}
+                          className="w-full h-8"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">To Date</label>
+                        <Input 
+                          type="date" 
+                          value={endDate} 
+                          onChange={(e) => {
+                            setEndDate(e.target.value);
+                            updateURL(datePreset, startDate, e.target.value);
+                          }}
+                          className="w-full h-8"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Metrics - Mobile Optimized */}
+        {!loading && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+            {/* Total Amount */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-green-600 mb-1">Total Amount</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      ₹{(summary?.totalAmount ?? 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Total Expenses */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-cyan-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1">Total Expenses</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      {summary?.expenseCount ?? 0}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-blue-100 rounded-full">
+                    <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cash Expenses */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-amber-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}&paymentType=cash`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-orange-600 mb-1">Cash Expenses</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      ₹{summary?.paymentTypeBreakdown.find(p => p.type === 'cash')?.amount.toFixed(2) ?? '0.00'}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-orange-100 rounded-full">
+                    <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Online Expenses */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}&paymentType=online`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1">Online Expenses</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      ₹{summary?.paymentTypeBreakdown.find(p => p.type === 'online')?.amount.toFixed(2) ?? '0.00'}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-purple-100 rounded-full">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Expense Breakdown - Mobile Optimized */}
+        {!loading && summary && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 lg:mb-8">
+            {/* Category Breakdown */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-sm sm:text-base flex items-center">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-indigo-600" />
+                  By Category
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 sm:space-y-3">
+                {summary.categoryBreakdown.slice(0, 5).map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                        {item.category}
+                      </p>
+                      <p className="text-xs text-gray-500">{item.percentage}%</p>
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 ml-2">
+                      ₹{item.amount.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+                {summary.categoryBreakdown.length > 5 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs"
+                    onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}`)}
+                  >
+                    View All Categories
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Payment Type Breakdown */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-sm sm:text-base flex items-center">
+                  <Wallet className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-600" />
+                  By Payment Type
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 sm:space-y-3">
+                {summary.paymentTypeBreakdown.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      {getPaymentTypeIcon(item.type)}
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-gray-900 capitalize">
+                          {item.type}
+                        </p>
+                        <p className="text-xs text-gray-500">{item.percentage}%</p>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                      ₹{item.amount.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* User Breakdown */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-sm sm:text-base flex items-center">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
+                  By User
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 sm:space-y-3">
+                {summary.userBreakdown.slice(0, 5).map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                        {item.user}
+                      </p>
+                      <p className="text-xs text-gray-500">{item.percentage}%</p>
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 ml-2">
+                      ₹{item.amount.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+                {summary.userBreakdown.length > 5 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs"
+                    onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}`)}
+                  >
+                    View All Users
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Recent Expenses */}
+        <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-2 sm:pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-600" />
+                Recent Expenses
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => router.push(`/admin/expenses/list?startDate=${startDate}&endDate=${endDate}`)}
+                className="text-xs"
+              >
+                View All
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="p-4 border rounded-lg">
-                <div className="text-sm text-gray-600">Total Expense Amount</div>
-                <div className="mt-1 text-2xl font-semibold">₹{getTotalAmount(expenses).toFixed(2)}</div>
-              </div>
-              {/* Details hidden on small screens unless expanded */}
-              <div className={`p-4 border rounded-lg ${showSummaryDetails ? '' : 'hidden'} lg:block`}>
-                <div className="text-sm text-gray-600 mb-2">By Expense Type</div>
-                <div className="space-y-1">
-                  {Object.entries(getAmountByType(expenses)).map(([type, amt]) => (
-                    <div key={type} className="flex items-center justify-between text-sm">
-                      <span className="capitalize">{type}</span>
-                      <span className="tabular-nums">₹{amt.toFixed(2)}</span>
+            {loading ? (
+              <div className="text-center text-gray-500 py-8">Loading expenses...</div>
+            ) : expenses.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">No expenses found for the selected period</div>
+            ) : (
+              <div className="space-y-2 sm:space-y-3">
+                {expenses.map((expense) => (
+                  <div key={expense._id} className="p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Badge className={`text-xs ${getPaymentTypeColor(expense.paymentType)}`}>
+                            {getPaymentTypeIcon(expense.paymentType)}
+                            <span className="ml-1 capitalize">{expense.paymentType}</span>
+                          </Badge>
+                          <span className="text-sm sm:text-base font-semibold text-gray-900">
+                            ₹{expense.amount.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600 mb-1">
+                          {typeof expense.category === 'string' 
+                            ? categories.find(c => c._id === expense.category)?.name 
+                            : expense.category?.name} • {format(new Date(expense.date), 'MMM do, yyyy')}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-500">
+                          Paid by: {typeof expense.paidBy === 'string' 
+                            ? users.find(u => u._id === expense.paidBy)?.firstName 
+                            : expense.paidBy?.firstName}
+                        </div>
+                        {expense.description && (
+                          <div className="text-xs sm:text-sm text-gray-700 mt-1 truncate">
+                            {expense.description}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewExpense(expense._id)}
+                          className="text-xs h-7 px-2"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditExpense(expense._id)}
+                          className="text-xs h-7 px-2"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteExpense(expense._id)}
+                          className="text-xs h-7 px-2 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-              <div className={`p-4 border rounded-lg ${showSummaryDetails ? '' : 'hidden'} lg:block`}>
-                <div className="text-sm text-gray-600 mb-2">By Expense Category</div>
-                <div className="space-y-1 max-h-48 overflow-auto pr-1">
-                  {getAmountByCategory(expenses, categories).map(row => (
-                    <div key={row.label} className="flex items-center justify-between text-sm">
-                      <span className="truncate">{row.label}</span>
-                      <span className="tabular-nums">₹{row.value.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className={`p-4 border rounded-lg ${showSummaryDetails ? '' : 'hidden'} lg:block`}>
-                <div className="text-sm text-gray-600 mb-2">By User</div>
-                <div className="space-y-1 max-h-48 overflow-auto pr-1">
-                  {getAmountByUser(expenses, users).map(row => (
-                    <div key={row.label} className="flex items-center justify-between text-sm">
-                      <span className="truncate">{row.label}</span>
-                      <span className="tabular-nums">₹{row.value.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
-      )}
-
-      {/* Expenses List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Expenses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {expenses.length === 0 ? (
-            <div className="text-center text-gray-500">No expenses found</div>
-          ) : (
-            <div className="space-y-2">
-              {expenses.map((exp) => (
-                <div key={exp._id} className="p-3 border rounded flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">₹{exp.amount.toFixed(2)} • {typeof exp.category === 'string' ? categories.find(c => c._id === exp.category)?.name : exp.category.name}</div>
-                    <div className="text-xs text-gray-500">{new Date(exp.date).toLocaleDateString()} • {typeof exp.paidBy === 'string' ? users.find(u => u._id === exp.paidBy)?.firstName : exp.paidBy.firstName}</div>
-                    {exp.description && (
-                      <div className="text-sm text-gray-700">{exp.description}</div>
-                    )}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => router.push(`/admin/expenses/${exp._id}`)}>View</Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-// (old stray function removed)
-
-function FiltersModal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full sm:max-w-3xl bg-white rounded-t-xl sm:rounded-xl shadow-xl p-4 m-0 sm:m-4">
-        <div className="flex items-center justify-between pb-2 border-b">
-          <div className="text-base font-semibold">Filters</div>
-          <button aria-label="Close" className="p-1" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="pt-4">
-          {children}
-        </div>
       </div>
     </div>
   );
 }
-
-// ---------- Summary Helpers ----------
-function getTotalAmount(expenses: Expense[]): number {
-  return expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-}
-
-function getAmountByType(expenses: Expense[]): Record<string, number> {
-  const map: Record<string, number> = {};
-  for (const e of expenses) {
-    const key = (e.paymentType || 'unknown') as string;
-    map[key] = (map[key] || 0) + (e.amount || 0);
-  }
-  return map;
-}
-
-function resolveCategoryName(cat: Expense['category'], categories: ExpenseCategory[]): string {
-  if (!cat) return 'Unknown';
-  if (typeof cat === 'string') {
-    return categories.find(c => c._id === cat)?.name || 'Unknown';
-  }
-  return cat.name || 'Unknown';
-}
-
-function getAmountByCategory(expenses: Expense[], categories: ExpenseCategory[]): Array<{ label: string; value: number }> {
-  const map = new Map<string, number>();
-  for (const e of expenses) {
-    const label = resolveCategoryName(e.category, categories);
-    map.set(label, (map.get(label) || 0) + (e.amount || 0));
-  }
-  return Array.from(map.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value }));
-}
-
-function resolveUserName(paidBy: Expense['paidBy'], users: User[]): string {
-  if (!paidBy) return 'Unknown';
-  if (typeof paidBy === 'string') {
-    const u = users.find(x => x._id === paidBy);
-    return u ? `${u.firstName} ${u.lastName ?? ''}`.trim() : 'Unknown';
-  }
-  const anyUser = paidBy as any;
-  const first = anyUser?.firstName || '';
-  const last = anyUser?.lastName || '';
-  return `${first} ${last}`.trim() || 'Unknown';
-}
-
-function getAmountByUser(expenses: Expense[], users: User[]): Array<{ label: string; value: number }> {
-  const map = new Map<string, number>();
-  for (const e of expenses) {
-    const label = resolveUserName(e.paidBy, users);
-    map.set(label, (map.get(label) || 0) + (e.amount || 0));
-  }
-  return Array.from(map.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value }));
-}
-
-

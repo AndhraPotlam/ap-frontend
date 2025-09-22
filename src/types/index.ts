@@ -229,6 +229,81 @@ export interface Expense {
   updatedAt: string;
 }
 
+export interface ExpenseSummary {
+  totalAmount: number;
+  expenseCount: number;
+  paymentTypeBreakdown: Array<{
+    type: string;
+    amount: number;
+    percentage: string;
+  }>;
+  categoryBreakdown: Array<{
+    category: string;
+    amount: number;
+    percentage: string;
+  }>;
+  userBreakdown: Array<{
+    user: string;
+    amount: number;
+    percentage: string;
+  }>;
+}
+
+// New Task Management Types
+export type TaskType = 'cooking'|'cutting'|'preparing'|'cleaning'|'mixing'|'removing'|'soaking'|'other';
+export type TaskPriority = 'low'|'medium'|'high'|'urgent';
+
+export interface StepTaskTemplate {
+  _id?: string;
+  name: string;
+  description?: string;
+  type: TaskType;
+  procedure?: string;
+  priority: TaskPriority;
+  itemsUsed?: string[];
+  defaultAssignees?: string[]; // user ids
+  timeWindow: { startOffsetMin: number; durationMin: number };
+  taskFor?: string[];
+  tags?: string[];
+  location?: string;
+}
+
+export interface RecipeStep {
+  _id?: string;
+  name: string;
+  order: number;
+  instructions?: string;
+  location?: string;
+  estimatedDurationMin?: number;
+  tasks: StepTaskTemplate[];
+}
+
+export interface Recipe {
+  _id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  serves?: number;
+  isActive: boolean;
+  steps: RecipeStep[];
+  createdBy?: string;
+}
+
+export interface DayPlanSelectedRecipe {
+  recipe: string | Recipe;
+  plannedStart?: string; // HH:mm
+  serves?: number;
+}
+
+export interface DayPlan {
+  _id: string;
+  date: string; // ISO
+  shift?: 'morning'|'evening'|'other';
+  selectedRecipes: DayPlanSelectedRecipe[];
+  generatedAt?: string;
+  generatedBy?: string;
+}
+
 // Cash Box Management Types
 
 export interface CashSessionType {

@@ -28,7 +28,7 @@ export default function SessionDetailsPage() {
   const [editOpeningAmount, setEditOpeningAmount] = useState('');
   const [editClosingAmount, setEditClosingAmount] = useState('');
   const [isUpdatingSession, setIsUpdatingSession] = useState(false);
-  const isAdminOrEmployee = user && (user.role === 'admin' || user.role === 'employee');
+  const isAdminOrEmployee = user && ['admin', 'employee'].includes(user.role);
 
   const fetchDetails = async () => {
     setLoading(true);

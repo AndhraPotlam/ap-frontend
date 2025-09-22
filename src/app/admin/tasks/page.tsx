@@ -1,594 +1,762 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import api from '@/lib/api';
-import { format } from 'date-fns';
 import { Task, TaskStats, User } from '@/types';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { 
+  ArrowLeft, 
   Plus, 
-  Search, 
   Filter, 
+  TrendingUp, 
+  TrendingDown, 
   Calendar, 
   Clock, 
-  User as UserIcon, 
-  ArrowLeft,
+  Settings, 
+  Eye,
+  BarChart3,
+  Users,
+  Activity,
+  Edit,
+  Trash2,
   CheckCircle,
   AlertCircle,
   Pause,
   XCircle,
   Play,
-  List,
-  Grid3X3
+  ClipboardList,
+  Timer,
+  User as UserIcon
 } from 'lucide-react';
-import TaskCalendar from '@/components/TaskCalendar';
-import TaskGenerator from '@/components/TaskGenerator';
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<TaskStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [taskForFilter, setTaskForFilter] = useState<string>('');
-  const [checklistTypeFilter, setChecklistTypeFilter] = useState<string>('');
-  const [priorityFilter, setPriorityFilter] = useState<string>('');
-  const [assignedToFilter, setAssignedToFilter] = useState<string>('');
-  const [dateFilter, setDateFilter] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'generator'>('list');
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, isAdmin, isLoading } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [stats, setStats] = useState<TaskStats | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<string>('thisWeek');
+  const [startDate, setStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
+  // URL state management
+  const updateURL = (preset: string, start?: string, end?: string) => {
+    const params = new URLSearchParams();
+    params.set('preset', preset);
+    if (start) params.set('startDate', start);
+    if (end) params.set('endDate', end);
+    router.replace(`/admin/tasks?${params.toString()}`, { scroll: false });
+  };
+
+  const loadStateFromURL = () => {
+    const preset = searchParams.get('preset') || 'thisWeek';
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    
+    console.log('Loading state from URL:', { preset, start, end, allParams: searchParams.toString() });
+    
+    // If no dates in URL, use preset to calculate them
+    if (!start || !end) {
+      const { start: calculatedStart, end: calculatedEnd } = getDateRange(preset);
+      console.log('Calculated dates from preset:', { calculatedStart, calculatedEnd });
+      setStartDate(calculatedStart);
+      setEndDate(calculatedEnd);
+    } else {
+      console.log('Using dates from URL:', { start, end });
+      setStartDate(start);
+      setEndDate(end);
+    }
+    
+    setDatePreset(preset);
+  };
+
+  // Date preset logic
+  const getDateRange = (preset: string) => {
+    const today = new Date();
+    switch (preset) {
+      case 'today':
+        return {
+          start: format(today, 'yyyy-MM-dd'),
+          end: format(today, 'yyyy-MM-dd')
+        };
+      case 'thisWeek':
+        return {
+          start: format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'), // Monday
+          end: format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd') // Sunday
+        };
+      case 'thisMonth':
+        return {
+          start: format(startOfMonth(today), 'yyyy-MM-dd'),
+          end: format(endOfMonth(today), 'yyyy-MM-dd')
+        };
+      case 'custom':
+        return {
+          start: startDate,
+          end: endDate
+        };
+      default:
+        return {
+          start: format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+          end: format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+        };
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { start, end } = getDateRange(datePreset);
+      console.log('Fetching data with:', { datePreset, start, end });
+      
+      const [tRes, sRes, uRes] = await Promise.all([
+        api.get(`/tasks?startDate=${start}&endDate=${end}&limit=10`),
+        api.get(`/tasks/stats?startDate=${start}&endDate=${end}`),
+        api.get('/users')
+      ]);
+      
+      if (tRes.ok) {
+        const data = await tRes.json();
+        console.log('Tasks data received:', data);
+        setTasks(data.tasks || []);
+      } else {
+        console.error('Tasks API error:', tRes.status, await tRes.text());
+      }
+      
+      if (sRes.ok) {
+        const data = await sRes.json();
+        console.log('Stats data received:', data);
+        setStats(data);
+      } else {
+        console.error('Stats API error:', sRes.status, await sRes.text());
+        setStats(null);
+      }
+
+      if (uRes.ok) {
+        const data = await uRes.json();
+        setUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load state from URL on mount and when URL changes
   useEffect(() => {
-    if (!authLoading) {
-      if (!user || !isAdmin) {
+    loadStateFromURL();
+  }, [searchParams]);
+
+  // Fetch data when dependencies change
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+      if (!isAdmin) {
         router.push('/dashboard');
         return;
       }
-      fetchTasks();
-      fetchUsers();
-      fetchStats();
+      fetchData();
     }
-  }, [user, isAdmin, authLoading, router]);
+  }, [isLoading, user, isAdmin, datePreset, startDate, endDate]);
 
-  const fetchTasks = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
-      if (taskForFilter && taskForFilter !== 'all') params.append('taskFor', taskForFilter);
-      if (checklistTypeFilter && checklistTypeFilter !== 'all') params.append('checklistType', checklistTypeFilter);
-      if (priorityFilter && priorityFilter !== 'all') params.append('priority', priorityFilter);
-      if (assignedToFilter && assignedToFilter !== 'all') params.append('taskOwner', assignedToFilter);
-      if (dateFilter) params.append('date', dateFilter);
-
-      const response = await api.get(`/tasks?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(data.tasks || []);
-      } else {
-        toast.error('Failed to load tasks');
+  // Additional effect to handle page visibility changes and focus (when returning from other pages)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !isLoading && user) {
+        // Page became visible again, refresh data
+        fetchData();
       }
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      toast.error('Failed to load tasks');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get('/users');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
+    const handleFocus = () => {
+      if (!isLoading && user) {
+        // Page gained focus, refresh data
+        fetchData();
       }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isLoading, user, datePreset, startDate, endDate]);
+
+  const handleViewTask = (taskId: string) => {
+    const params = new URLSearchParams();
+    params.set('returnUrl', `/admin/tasks?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+    router.push(`/admin/tasks/${taskId}?${params.toString()}`);
   };
 
-  const fetchStats = async () => {
-    try {
-      const response = await api.get('/tasks/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+  const handleEditTask = (taskId: string) => {
+    const params = new URLSearchParams();
+    params.set('returnUrl', `/admin/tasks?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+    router.push(`/admin/tasks/${taskId}/edit?${params.toString()}`);
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      try {
+        const response = await api.delete(`/tasks/${taskId}`);
+        if (response.ok) {
+          fetchData(); // Refresh data
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error);
       }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
     }
-  };
-
-  const handleStatusUpdate = async (taskId: string, newStatus: string) => {
-    try {
-      const response = await api.put(`/tasks/${taskId}`, { status: newStatus });
-      if (response.ok) {
-        toast.success('Task status updated successfully');
-        fetchTasks();
-        fetchStats();
-      } else {
-        toast.error('Failed to update task status');
-      }
-    } catch (error) {
-      console.error('Error updating task status:', error);
-      toast.error('Failed to update task status');
-    }
-  };
-
-  const handleTaskClick = (task: Task) => {
-    router.push(`/admin/tasks/${task._id}`);
-  };
-
-  const handleTasksGenerated = () => {
-    fetchTasks();
-    fetchStats();
-  };
-
-  const handleDateSelect = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
-    setDateFilter(dateString);
-    setViewMode('list');
-    // Fetch tasks with the new date filter
-    setTimeout(() => {
-      fetchTasks();
-    }, 100);
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'in_progress':
-        return <Play className="h-4 w-4 text-blue-500" />;
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'on_hold':
-        return <Pause className="h-4 w-4 text-gray-500" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'in_progress': return <Play className="h-4 w-4" />;
+      case 'pending': return <Clock className="h-4 w-4" />;
+      case 'on_hold': return <Pause className="h-4 w-4" />;
+      case 'cancelled': return <XCircle className="h-4 w-4" />;
+      default: return <AlertCircle className="h-4 w-4" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'on_hold':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'on_hold': return 'bg-orange-100 text-orange-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'urgent': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const getTaskForColor = (taskFor: string) => {
-    switch (taskFor) {
-      case 'hotel':
-        return 'bg-blue-100 text-blue-800';
-      case 'restaurant':
-        return 'bg-orange-100 text-orange-800';
-      case 'maintenance':
-        return 'bg-purple-100 text-purple-800';
-      case 'cleaning':
-        return 'bg-green-100 text-green-800';
-      case 'security':
-        return 'bg-red-100 text-red-800';
-      case 'guest_services':
-        return 'bg-pink-100 text-pink-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDuration = (minutes?: number) => {
-    if (!minutes) return 'N/A';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
-  };
-
-  if (authLoading || isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading tasks...</div>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Back to Dashboard Button */}
-      <div className="mb-6">
-        <Button 
-          variant="outline" 
-          onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
-      </div>
-
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Task Management</h1>
-          <p className="text-gray-600">Manage and track hotel tasks and assignments</p>
-        </div>
-        <div className="flex gap-2 mt-4 lg:mt-0">
-          {/* View Toggle */}
-          <div className="flex border rounded-lg p-1">
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="flex items-center gap-2"
-            >
-              <List className="h-4 w-4" />
-              List
-            </Button>
-            <Button
-              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('calendar')}
-              className="flex items-center gap-2"
-            >
-              <Calendar className="h-4 w-4" />
-              Calendar
-            </Button>
-            <Button
-              variant={viewMode === 'generator' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('generator')}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Generator
-            </Button>
-          </div>
-          <Button onClick={() => router.push('/admin/tasks/templates')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Manage Templates
-          </Button>
-          <Button onClick={() => router.push('/admin/tasks/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{stats.overview.total}</div>
-              <div className="text-sm text-gray-600">Total Tasks</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{stats.overview.pending}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{stats.overview.inProgress}</div>
-              <div className="text-sm text-gray-600">In Progress</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{stats.overview.completed}</div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-red-600">{stats.overview.cancelled}</div>
-              <div className="text-sm text-gray-600">Cancelled</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-gray-600">{stats.overview.onHold}</div>
-              <div className="text-sm text-gray-600">On Hold</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search tasks..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Dashboard Header */}
+        <div className="mb-5 sm:mb-7 lg:mb-9">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-5">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/admin')}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+              <div className="leading-tight">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
+                  Task Management
+                </h1>
+                <p className="text-sm sm:text-[15px] text-gray-600 mt-1.5">
+                  Manage and track hotel tasks and assignments
+                </p>
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Task For</label>
-              <Select value={taskForFilter} onValueChange={setTaskForFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  <SelectItem value="hotel">Hotel</SelectItem>
-                  <SelectItem value="restaurant">Restaurant</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="cleaning">Cleaning</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="guest_services">Guest Services</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Checklist Type</label>
-              <Select value={checklistTypeFilter} onValueChange={setChecklistTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Priority</label>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All priorities" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All priorities</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Assigned To</label>
-              <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All users" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All users</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user._id} value={user._id}>
-                      {user.firstName} {user.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date</label>
-              <Input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                placeholder="Filter by date"
-              />
-            </div>
+            {/* Redundant header actions removed; use Quick Actions below */}
           </div>
-          <div className="flex justify-between mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setDateFilter('');
-                fetchTasks();
-              }}
-              disabled={!dateFilter}
-            >
-              Clear Date Filter
-            </Button>
-            <Button variant="outline" onClick={fetchTasks}>
-              Apply Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Date Filter Indicator */}
-      {dateFilter && (
-        <Card className="mb-4">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">
-                  Showing tasks for: {new Date(dateFilter).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
-              </div>
+        {/* Compact Controls Section */}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          {/* Mobile: Stacked layout */}
+          <div className="lg:hidden space-y-3">
+            {/* Quick Actions - Mobile */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Activity className="h-4 w-4 mr-2 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">Quick Actions</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => router.push('/admin/tasks/templates')} 
+                      className="text-xs px-2 h-7"
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Templates
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        params.set('returnUrl', `/admin/tasks?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+                        router.push(`/admin/tasks/create?${params.toString()}`);
+                      }} 
+                      className="text-xs px-2 h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={fetchData} 
+                      className="text-xs px-2 h-7"
+                    >
+                      <Filter className="h-3 w-3 mr-1" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Date Range - Mobile */}
+            <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center mb-3">
+                  <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                  <span className="text-sm font-medium text-gray-700">Date Range</span>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium mb-1 block text-gray-700">Select Period</label>
+                    <Select value={datePreset} onValueChange={(value) => {
+                      setDatePreset(value);
+                      if (value === 'custom') {
+                        updateURL(value, startDate, endDate);
+                      } else {
+                        const { start, end } = getDateRange(value);
+                        updateURL(value, start, end);
+                      }
+                    }}>
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Select date range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="thisWeek">This Week</SelectItem>
+                        <SelectItem value="thisMonth">This Month</SelectItem>
+                        <SelectItem value="custom">Custom Range</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100">
+                    <div className="text-xs text-blue-600 mb-1 font-medium">Selected Period</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {(() => {
+                        const { start, end } = getDateRange(datePreset);
+                        if (start === end) {
+                          return format(new Date(start), 'MMM do, yyyy');
+                        } else {
+                          return `${format(new Date(start), 'MMM do')} - ${format(new Date(end), 'MMM do, yyyy')}`;
+                        }
+                      })()}
+                    </div>
+                  </div>
+
+                  {datePreset === 'custom' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">From</label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => {
+                            setStartDate(e.target.value);
+                            updateURL(datePreset, e.target.value, endDate);
+                          }}
+                          className="w-full h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">To</label>
+                        <Input 
+                          type="date" 
+                          value={endDate} 
+                          onChange={(e) => {
+                            setEndDate(e.target.value);
+                            updateURL(datePreset, startDate, e.target.value);
+                          }}
+                          className="w-full h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Desktop: Side by side layout */}
+          <div className="hidden lg:grid lg:grid-cols-4 gap-4">
+            {/* Quick Actions - Desktop */}
+            <div className="lg:col-span-1">
+              <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center">
+                    <Activity className="h-4 w-4 mr-2 text-blue-600" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => router.push('/admin/tasks/templates')} 
+                    className="w-full justify-start text-xs h-7"
+                  >
+                    <Settings className="h-3 w-3 mr-2" />
+                    Manage Templates
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      params.set('returnUrl', `/admin/tasks?preset=${datePreset}&startDate=${startDate}&endDate=${endDate}`);
+                      router.push(`/admin/tasks/create?${params.toString()}`);
+                    }} 
+                    className="w-full justify-start text-xs h-7"
+                  >
+                    <Plus className="h-3 w-3 mr-2" />
+                    Add Task
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={fetchData} 
+                    className="w-full justify-start text-xs h-7"
+                  >
+                    <Filter className="h-3 w-3 mr-2" />
+                    Refresh Data
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Date Range - Desktop */}
+            <div className="lg:col-span-3">
+              <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center">
+                    <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                    Date Range
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium mb-1 block text-gray-700">Select Period</label>
+                      <Select value={datePreset} onValueChange={(value) => {
+                        setDatePreset(value);
+                        if (value === 'custom') {
+                          updateURL(value, startDate, endDate);
+                        } else {
+                          const { start, end } = getDateRange(value);
+                          updateURL(value, start, end);
+                        }
+                      }}>
+                        <SelectTrigger className="w-full h-8">
+                          <SelectValue placeholder="Select date range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="thisWeek">This Week</SelectItem>
+                          <SelectItem value="thisMonth">This Month</SelectItem>
+                          <SelectItem value="custom">Custom Range</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-100">
+                      <div className="text-xs text-blue-600 mb-1 font-medium">Selected Period</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {(() => {
+                          const { start, end } = getDateRange(datePreset);
+                          if (start === end) {
+                            return format(new Date(start), 'MMM do, yyyy');
+                          } else {
+                            return `${format(new Date(start), 'MMM do')} - ${format(new Date(end), 'MMM do, yyyy')}`;
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {datePreset === 'custom' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">From Date</label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => {
+                            setStartDate(e.target.value);
+                            updateURL(datePreset, e.target.value, endDate);
+                          }}
+                          className="w-full h-8"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-700">To Date</label>
+                        <Input 
+                          type="date" 
+                          value={endDate} 
+                          onChange={(e) => {
+                            setEndDate(e.target.value);
+                            updateURL(datePreset, startDate, e.target.value);
+                          }}
+                          className="w-full h-8"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Metrics - Mobile Optimized */}
+        {!loading && stats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+            {/* Total Tasks */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-blue-50 to-cyan-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/tasks/list?startDate=${startDate}&endDate=${endDate}`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1">Total Tasks</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      {stats.overview?.total ?? 0}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-blue-100 rounded-full">
+                    <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Completed Tasks */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/tasks/list?startDate=${startDate}&endDate=${endDate}&status=completed`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-green-600 mb-1">Completed</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      {stats.overview?.completed ?? 0}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* In Progress Tasks */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-orange-50 to-amber-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/tasks/list?startDate=${startDate}&endDate=${endDate}&status=in_progress`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-orange-600 mb-1">In Progress</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      {stats.overview?.inProgress ?? 0}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-orange-100 rounded-full">
+                    <Play className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pending Tasks */}
+            <Card 
+              className="shadow-sm border-0 bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/tasks/list?startDate=${startDate}&endDate=${endDate}&status=pending`)}
+            >
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1">Pending</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                      {stats.overview?.pending ?? 0}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-purple-100 rounded-full">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Task Generation Section */}
+        <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm mb-4 sm:mb-6 lg:mb-8">
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-sm sm:text-base flex items-center">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-indigo-600" />
+              Generate Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <Button 
                 variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setDateFilter('');
-                  fetchTasks();
-                }}
+                onClick={() => router.push(`/admin/tasks/generate?type=daily&startDate=${startDate}&endDate=${endDate}`)}
+                className="flex items-center justify-center space-x-2 h-12"
               >
-                Clear Date Filter
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">Generate Daily Tasks</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => router.push(`/admin/tasks/generate?type=weekly&startDate=${startDate}&endDate=${endDate}`)}
+                className="flex items-center justify-center space-x-2 h-12"
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">Generate Weekly Tasks</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => router.push(`/admin/tasks/generate?type=monthly&startDate=${startDate}&endDate=${endDate}`)}
+                className="flex items-center justify-center space-x-2 h-12"
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">Generate Monthly Tasks</span>
               </Button>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Tasks Display */}
-      {viewMode === 'calendar' ? (
-        <TaskCalendar 
-          tasks={tasks}
-          onTaskClick={handleTaskClick}
-          onStatusUpdate={handleStatusUpdate}
-          onDateSelect={handleDateSelect}
-        />
-      ) : viewMode === 'generator' ? (
-        <TaskGenerator onTasksGenerated={handleTasksGenerated} />
-      ) : (
-        <div className="space-y-4">
-          {tasks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <div className="text-gray-500">No tasks found</div>
-              </CardContent>
-            </Card>
-          ) : (
-            tasks.map((task) => (
-              <Card key={task._id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {getStatusIcon(task.status)}
-                        <h3 className="text-lg font-semibold">{task.title}</h3>
-                        <Badge className={getStatusColor(task.status)}>
-                          {task.status.replace('_', ' ')}
-                        </Badge>
-                        <Badge className={getPriorityColor(task.priority)}>
-                          {task.priority}
-                        </Badge>
-                        <Badge className={getTaskForColor(task.taskFor)}>
-                          {task.taskFor.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-600 mb-3">{task.description}</p>
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <UserIcon className="h-4 w-4" />
-                          <span>Owner: {task.taskOwner.firstName} {task.taskOwner.lastName}</span>
+        {/* Recent Tasks */}
+        <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-2 sm:pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center">
+                <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gray-600" />
+                Recent Tasks
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => router.push(`/admin/tasks/list?startDate=${startDate}&endDate=${endDate}`)}
+                className="text-xs"
+              >
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center text-gray-500 py-8">Loading tasks...</div>
+            ) : tasks.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">No tasks found for the selected period</div>
+            ) : (
+              <div className="space-y-2 sm:space-y-3">
+                {tasks.map((task) => (
+                  <div key={task._id} className="p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Badge className={`text-xs ${getStatusColor(task.status)}`}>
+                            {getStatusIcon(task.status)}
+                            <span className="ml-1 capitalize">{task.status.replace('_', ' ')}</span>
+                          </Badge>
+                          <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
+                            {task.priority}
+                          </Badge>
+                          <span className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            {task.title}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Created: {format(new Date(task.createdAt), 'MMM dd, yyyy')}</span>
+                        <div className="text-xs sm:text-sm text-gray-600 mb-1">
+                          {task.taskFor} • {format(new Date(task.dueDate || task.createdAt), 'MMM do, yyyy')}
                         </div>
-                        {task.dueDate && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</span>
+                        <div className="text-xs sm:text-sm text-gray-500">
+                          Assigned to: {(() => {
+                            const owner = (task as any).taskOwner;
+                            const ownerId = typeof owner === 'string' ? owner : owner?._id;
+                            const user = users.find(u => u._id === ownerId);
+                            return user ? user.firstName : (typeof owner === 'string' ? owner : owner?.firstName || '');
+                          })()}
+                          {task.estimatedDuration && (
+                            <span className="ml-2">
+                              • Est: {task.estimatedDuration}min
+                            </span>
+                          )}
+                        </div>
+                        {task.description && (
+                          <div className="text-xs sm:text-sm text-gray-700 mt-1 truncate">
+                            {task.description}
                           </div>
                         )}
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>Duration: {formatDuration(task.estimatedDuration)}</span>
-                        </div>
-                        {task.timeTaken && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>Actual: {formatDuration(task.timeTaken)}</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Select
-                        value={task.status}
-                        onValueChange={(value) => handleStatusUpdate(task._id, value)}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="on_hold">On Hold</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/admin/tasks/${task._id}`)}
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewTask(task._id)}
+                          className="text-xs h-7 px-2"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task._id)}
+                          className="text-xs h-7 px-2"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteTask(task._id)}
+                          className="text-xs h-7 px-2 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
