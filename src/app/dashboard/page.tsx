@@ -13,13 +13,19 @@ import {
   ShoppingCart,
   Home,
   ClipboardList,
-  Wallet
+  Wallet,
+  Calendar,
+  ChefHat,
+  DollarSign
 } from 'lucide-react';
 import { Coins } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, user: authUser } = useAuth();
+  
+  // Check if user is admin or employee
+  const isAdminOrEmployee = isAdmin || authUser?.role === 'employee';
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -36,22 +42,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Home Option */}
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/')}>
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-              <Home className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <CardTitle className="text-lg">Home</CardTitle>
-                <CardDescription>Back to main page</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">
-                Return to the main page to browse products and shop.
-              </p>
-            </CardContent>
-          </Card>
-
           {/* User Options */}
           <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/profile')}>
             <CardHeader className="flex flex-row items-center space-y-0 pb-2">
@@ -83,20 +73,23 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/cart')}>
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-              <ShoppingCart className="h-8 w-8 text-orange-600" />
-              <div className="ml-4">
-                <CardTitle className="text-lg">Shopping Cart</CardTitle>
-                <CardDescription>Review your cart items</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">
-                View cart items, apply coupons, and proceed to checkout.
-              </p>
-            </CardContent>
-          </Card>
+          {/* New Task Management - Available for Admins and Employees */}
+          {isAdminOrEmployee && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/new-tasks')}>
+              <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                <ClipboardList className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <CardTitle className="text-lg">New Task Management</CardTitle>
+                  <CardDescription>Recipe process-driven task planning</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  Plan recipe processes, generate daily tasks, and manage task execution workflows.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Admin Options */}
           {isAdmin && (
@@ -119,28 +112,28 @@ export default function DashboardPage() {
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                   <Package className="h-8 w-8 text-indigo-600" />
                   <div className="ml-4">
-                    <CardTitle className="text-lg">Products</CardTitle>
-                    <CardDescription>Manage product catalog</CardDescription>
+                    <CardTitle className="text-lg">Product Management</CardTitle>
+                    <CardDescription>Manage products, categories & recipe processes</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-600">
-                    Add, edit, and manage products in your catalog.
+                    Add, edit, and manage products, categories, and recipe processes in your catalog.
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/categories')}>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/price-management')}>
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                  <Tag className="h-8 w-8 text-pink-600" />
+                  <DollarSign className="h-8 w-8 text-green-600" />
                   <div className="ml-4">
-                    <CardTitle className="text-lg">Categories</CardTitle>
-                    <CardDescription>Organize product categories</CardDescription>
+                    <CardTitle className="text-lg">Price Management</CardTitle>
+                    <CardDescription>Pricing, coupons & discounts</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-600">
-                    Create and manage product categories and subcategories.
+                    Configure pricing settings, manage coupons, and set up automatic discounts.
                   </p>
                 </CardContent>
               </Card>
@@ -150,42 +143,12 @@ export default function DashboardPage() {
                   <Settings className="h-8 w-8 text-gray-600" />
                   <div className="ml-4">
                     <CardTitle className="text-lg">Settings</CardTitle>
-                    <CardDescription>System configuration</CardDescription>
+                    <CardDescription>General system configuration</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-600">
-                    Configure pricing, tax rates, shipping costs, and system settings.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/coupons')}>
-                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                  <Percent className="h-8 w-8 text-red-600" />
-                  <div className="ml-4">
-                    <CardTitle className="text-lg">Coupons</CardTitle>
-                    <CardDescription>Manage promotional codes</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">
-                    Create and manage coupon codes for customer discounts.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/discounts')}>
-                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                  <Percent className="h-8 w-8 text-yellow-600" />
-                  <div className="ml-4">
-                    <CardTitle className="text-lg">Discounts</CardTitle>
-                    <CardDescription>Automatic discount rules</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">
-                    Set up automatic discount rules based on order value, quantity, etc.
+                    Configure general system settings, cashbox settings, and other configurations.
                   </p>
                 </CardContent>
               </Card>

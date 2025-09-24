@@ -278,21 +278,19 @@ export interface RecipeStep {
   tasks: StepTaskTemplate[];
 }
 
-export interface Recipe {
+export interface RecipeProcess {
   _id: string;
   name: string;
   description?: string;
   category?: string;
-  serves?: number;
   isActive: boolean;
   steps: RecipeStep[];
   createdBy?: string;
 }
 
 export interface DayPlanSelectedRecipe {
-  recipe: string | Recipe;
+  recipe: string | RecipeProcess;
   plannedStart?: string; // HH:mm
-  serves?: number;
 }
 
 export interface DayPlan {

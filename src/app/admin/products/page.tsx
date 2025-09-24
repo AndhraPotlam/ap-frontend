@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Search, ArrowLeft } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Tag, ChefHat, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -108,11 +108,56 @@ export default function ProductsPage() {
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Products Management</h1>
+        <h1 className="text-3xl font-bold">Product Management</h1>
         <Button onClick={() => router.push('/admin/products/add')}>
           <Plus className="mr-2 h-4 w-4" />
           Add Product
         </Button>
+      </div>
+
+      {/* Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/products')}>
+          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+            <Package className="h-6 w-6 text-indigo-600" />
+            <div className="ml-3">
+              <CardTitle className="text-base">Products</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Manage product catalog
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/categories')}>
+          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+            <Tag className="h-6 w-6 text-pink-600" />
+            <div className="ml-3">
+              <CardTitle className="text-base">Categories</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Organize product categories
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/new-tasks/recipes')}>
+          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+            <ChefHat className="h-6 w-6 text-emerald-600" />
+            <div className="ml-3">
+              <CardTitle className="text-base">Recipe Processes</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Create and manage recipe processes
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>

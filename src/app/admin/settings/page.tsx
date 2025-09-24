@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
-import { Settings, Save, RefreshCw, Percent, Truck, CreditCard, Tag, ArrowLeft, Coins, Plus, X } from 'lucide-react';
+import { Settings, Save, RefreshCw, Percent, Truck, CreditCard, Tag, ArrowLeft, Coins, Plus, X, DollarSign } from 'lucide-react';
 
 interface Setting {
   _id: string;
@@ -320,53 +320,16 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
+
         {error && (
           <Alert className="mb-6">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Pricing Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tag className="h-5 w-5" />
-                Pricing Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {settings
-                .filter(s => s.category === 'pricing')
-                .map(setting => (
-                  <div key={setting.key}>
-                    {renderSettingInput(setting)}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
-          {/* Shipping Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Shipping Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {settings
-                .filter(s => s.category === 'shipping')
-                .map(setting => (
-                  <div key={setting.key}>
-                    {renderSettingInput(setting)}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 gap-6">
           {/* General Settings */}
-          <Card className="lg:col-span-2">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />

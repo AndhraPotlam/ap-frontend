@@ -156,10 +156,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         <Button
           variant="ghost"
           className="mb-4"
-          onClick={() => router.push('/admin/inventory')}
+          onClick={() => router.push('/admin/products')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Inventory
+          Back to Products
         </Button>
         <h1 className="text-3xl font-bold">Edit Product</h1>
       </div>

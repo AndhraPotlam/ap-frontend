@@ -57,7 +57,7 @@ export default function UpdateStockPage() {
           onClick={() => router.push('/admin/products')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Inventory
+          Back to Products
         </Button>
         <h1 className="text-3xl font-bold">Update Stock</h1>
       </div>

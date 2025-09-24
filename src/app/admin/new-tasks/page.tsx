@@ -17,7 +17,9 @@ export default function NewTasksDashboard() {
         router.push('/auth/login');
         return;
       }
-      if (!isAdmin) {
+      // Check if user is admin or employee
+      const isAdminOrEmployee = isAdmin || user?.role === 'employee';
+      if (!isAdminOrEmployee) {
         router.push('/dashboard');
         return;
       }
@@ -29,27 +31,17 @@ export default function NewTasksDashboard() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">New Task Management</h1>
-          <p className="text-gray-600 mt-1">Recipe-driven daily task generation</p>
+          <p className="text-gray-600 mt-1">Recipe process-driven daily task generation</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/admin/new-tasks/planner')}>
             <CardHeader>
               <CardTitle className="flex items-center"><Calendar className="h-5 w-5 mr-2 text-blue-600" />Day Planner</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">Select recipes for the day, set start times, and generate tasks.</p>
+              <p className="text-sm text-gray-600">Select recipe processes for the day, set start times, and generate tasks.</p>
               <Button variant="outline" size="sm" className="mt-3">Open Planner <ArrowRight className="h-4 w-4 ml-2" /></Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/admin/new-tasks/recipes')}>
-            <CardHeader>
-              <CardTitle className="flex items-center"><ChefHat className="h-5 w-5 mr-2 text-emerald-600" />Recipes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Create recipes with steps and per-step task templates.</p>
-              <Button variant="outline" size="sm" className="mt-3">Manage Recipes <ArrowRight className="h-4 w-4 ml-2" /></Button>
             </CardContent>
           </Card>
 
@@ -63,6 +55,24 @@ export default function NewTasksDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Note about Recipe Processes */}
+        <Card className="mt-6 bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <ChefHat className="h-5 w-5 text-blue-600" />
+              <div>
+                <h3 className="font-semibold text-blue-900">Recipe Process Management</h3>
+                <p className="text-sm text-blue-700">
+                  Recipe processes have been moved to <strong>Product Management</strong> for better organization. 
+                  <Button variant="link" className="p-0 h-auto text-blue-600 underline" onClick={() => router.push('/admin/products')}>
+                    Go to Product Management
+                  </Button>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

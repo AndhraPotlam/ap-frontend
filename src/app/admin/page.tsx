@@ -125,26 +125,6 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* New Task Management */}
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Task Management</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Recipe Tasks</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Plan by recipes and generate daily tasks
-            </p>
-            <Button 
-              className="mt-4 w-full" 
-              onClick={() => router.push('/admin/new-tasks')}
-            >
-              Open New Task Management
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
