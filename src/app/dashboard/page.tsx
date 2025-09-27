@@ -108,20 +108,35 @@ export default function DashboardPage() {
                   </p>
                 </CardContent>
               </Card>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/products')}>
-                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                  <Package className="h-8 w-8 text-indigo-600" />
-                  <div className="ml-4">
-                    <CardTitle className="text-lg">Product Management</CardTitle>
-                    <CardDescription>Manage products, categories & recipe processes</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">
-                    Add, edit, and manage products, categories, and recipe processes in your catalog.
-                  </p>
-                </CardContent>
-              </Card>
+                      <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/recipes')}>
+                        <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                          <ChefHat className="h-8 w-8 text-orange-600" />
+                          <div className="ml-4">
+                            <CardTitle className="text-lg">Recipe Management</CardTitle>
+                            <CardDescription>Manage recipes, ingredients & cooking processes</CardDescription>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-600">
+                            Create recipes with ingredients, manage raw materials, and organize cooking processes.
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/products')}>
+                        <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                          <Package className="h-8 w-8 text-indigo-600" />
+                          <div className="ml-4">
+                            <CardTitle className="text-lg">Product Management</CardTitle>
+                            <CardDescription>Manage products and categories</CardDescription>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-600">
+                            Add, edit, and manage products and categories in your catalog.
+                          </p>
+                        </CardContent>
+                      </Card>
 
               <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleNavigation('/admin/price-management')}>
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">

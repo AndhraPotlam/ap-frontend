@@ -145,16 +145,16 @@ export default function ProductsPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/new-tasks/recipes')}>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/recipes')}>
           <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <ChefHat className="h-6 w-6 text-emerald-600" />
+            <ChefHat className="h-6 w-6 text-orange-600" />
             <div className="ml-3">
-              <CardTitle className="text-base">Recipe Processes</CardTitle>
+              <CardTitle className="text-base">Recipe Management</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600">
-              Create and manage recipe processes
+              Manage recipes and cooking processes
             </p>
           </CardContent>
         </Card>

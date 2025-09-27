@@ -216,10 +216,12 @@ export default function DayPlannerPage() {
   const duplicateDayPlan = (dayPlan: DayPlan) => {
     setDate(format(parseISO(dayPlan.date), 'yyyy-MM-dd'));
     setShift(dayPlan.shift || 'morning');
-    setSelectedRecipes(dayPlan.selectedRecipes.map(sr => ({
-      recipe: typeof sr.recipe === 'string' ? sr.recipe : sr.recipe._id,
-      plannedStart: sr.plannedStart,
-    })));
+    setSelectedRecipes(dayPlan.selectedRecipes
+      .map(sr => ({
+        recipe: typeof sr.recipe === 'string' ? sr.recipe : sr.recipe._id,
+        plannedStart: sr.plannedStart,
+      }))
+      .filter(sr => sr.recipe) as DayPlanSelectedRecipe[]);
     setCurrentDayPlan(null);
     toast.success('Day plan loaded for editing');
   };
@@ -352,9 +354,9 @@ export default function DayPlannerPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {availableRecipes.filter(recipe => 
-                        !selectedRecipes.some(sr => (typeof sr.recipe === 'string' ? sr.recipe : sr.recipe._id) === recipe._id)
+                        recipe._id && !selectedRecipes.some(sr => (typeof sr.recipe === 'string' ? sr.recipe : sr.recipe._id) === recipe._id)
                       ).map(recipe => (
-                        <SelectItem key={recipe._id} value={recipe._id}>
+                        <SelectItem key={recipe._id} value={recipe._id!}>
                           <div className="flex items-center gap-2">
                             <Utensils className="h-4 w-4" />
                             {recipe.name}
@@ -379,6 +381,7 @@ export default function DayPlannerPage() {
                   <div className="space-y-4">
                     {selectedRecipes.map((sr, index) => {
                       const recipeId = typeof sr.recipe === 'string' ? sr.recipe : sr.recipe._id;
+                      if (!recipeId) return null;
                       return (
                         <Card key={recipeId} className="border-l-4 border-l-blue-500">
                           <CardContent className="p-4">

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
-import { RecipeProcess, RecipeStep, StepTaskTemplate, TaskPriority, TaskType, User, Product } from '@/types';
+import { LegacyRecipeProcess, RecipeStep, StepTaskTemplate, TaskPriority, TaskType, User, Product } from '@/types';
 import api from '@/lib/api';
 import { 
   Plus, 
@@ -32,11 +32,11 @@ import { toast } from 'sonner';
 export default function RecipesPage() {
   const router = useRouter();
   const { user, isAdmin, isLoading } = useAuth();
-  const [recipes, setRecipes] = useState<RecipeProcess[]>([]);
+  const [recipes, setRecipes] = useState<LegacyRecipeProcess[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [creating, setCreating] = useState(false);
-  const [editingRecipe, setEditingRecipe] = useState<RecipeProcess | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<LegacyRecipeProcess | null>(null);
   const [form, setForm] = useState<{ 
     name: string; 
     description?: string; 
@@ -268,7 +268,7 @@ export default function RecipesPage() {
     }
   };
 
-  const editRecipe = (recipe: RecipeProcess) => {
+  const editRecipe = (recipe: LegacyRecipeProcess) => {
     setEditingRecipe(recipe);
     setForm({
       name: recipe.name,
@@ -280,7 +280,7 @@ export default function RecipesPage() {
     document.getElementById('recipe-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const duplicateRecipe = (recipe: RecipeProcess) => {
+  const duplicateRecipe = (recipe: LegacyRecipeProcess) => {
     setForm({
       name: `${recipe.name} (Copy)`,
       description: recipe.description || '',
