@@ -480,7 +480,7 @@ export default function EditRecipePage() {
                         <div>
                           <Label>Raw Material *</Label>
                           <Select
-                            value={ingredient.rawMaterial}
+                            value={typeof ingredient.rawMaterial === 'string' ? ingredient.rawMaterial : ingredient.rawMaterial?._id || ''}
                             onValueChange={(value) => updateIngredient(index, 'rawMaterial', value)}
                           >
                             <SelectTrigger>
