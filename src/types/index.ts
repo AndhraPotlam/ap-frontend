@@ -266,6 +266,17 @@ export interface StepTaskTemplate {
   taskFor?: string[];
   tags?: string[];
   location?: string;
+  // Robust planning/QA fields
+  acceptanceCriteria?: string; // concise done definition for the task
+  quantity?: number; // e.g., kg, liters, count
+  unit?: string; // unit for quantity
+  requiredSkills?: string[]; // skill tags
+  equipment?: string[]; // tools/equipment
+  safetyNotes?: string; // risks and precautions
+  qaChecks?: string[]; // quick verification checklist items
+  canRunInParallel?: boolean; // can this task run in parallel with others in the step
+  blocking?: boolean; // blocks next tasks until done
+  dependsOn?: number[]; // indexes of other tasks within the step that this depends on
 }
 
 export interface RecipeStep {

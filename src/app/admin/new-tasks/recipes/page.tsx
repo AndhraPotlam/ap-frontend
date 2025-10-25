@@ -70,7 +70,11 @@ export default function RecipesPage() {
       type: 'other',
       priority: 'medium',
       timeWindow: { startOffsetMin: 0, durationMin: 5 },
-      taskFor: []
+      taskFor: [],
+      canRunInParallel: true,
+      blocking: false,
+      qaChecks: [],
+      dependsOn: []
     } as any;
     next[idx].tasks.push(task);
     setForm({ ...form, steps: next });
@@ -224,6 +228,47 @@ export default function RecipesPage() {
                               }} />
                           </div>
                         </div>
+                        <div className="sm:col-span-4">
+                          <label className="text-xs font-medium mb-1 block">Acceptance Criteria</label>
+                          <Textarea value={t.acceptanceCriteria || ''} onChange={(e) => {
+                            const next = [...form.steps];
+                            next[idx].tasks[tIdx].acceptanceCriteria = e.target.value;
+                            setForm({ ...form, steps: next });
+                          }} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 sm:col-span-4">
+                          <div>
+                            <label className="text-xs font-medium mb-1 block">Quantity</label>
+                            <Input type="number" value={t.quantity || 0} onChange={(e) => {
+                              const next = [...form.steps];
+                              next[idx].tasks[tIdx].quantity = Number(e.target.value);
+                              setForm({ ...form, steps: next });
+                            }} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium mb-1 block">Unit</label>
+                            <Input value={t.unit || ''} onChange={(e) => {
+                              const next = [...form.steps];
+                              next[idx].tasks[tIdx].unit = e.target.value;
+                              setForm({ ...form, steps: next });
+                            }} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium mb-1 block">Parallel/Blocking</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button variant={t.canRunInParallel ? 'default' : 'outline'} size="sm" onClick={() => {
+                                const next = [...form.steps];
+                                next[idx].tasks[tIdx].canRunInParallel = !t.canRunInParallel;
+                                setForm({ ...form, steps: next });
+                              }}>Parallel</Button>
+                              <Button variant={t.blocking ? 'default' : 'outline'} size="sm" onClick={() => {
+                                const next = [...form.steps];
+                                next[idx].tasks[tIdx].blocking = !t.blocking;
+                                setForm({ ...form, steps: next });
+                              }}>Blocking</Button>
+                            </div>
+                          </div>
+                        </div>
                         <div className="sm:col-span-4 grid sm:grid-cols-2 gap-3">
                           <div>
                             <label className="text-xs font-medium mb-1 block">Assignees</label>
@@ -331,6 +376,98 @@ export default function RecipesPage() {
                                 </span>
                               ))}
                             </div>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-xs font-medium mb-1 block">Required Skills</label>
+                            <div className="flex gap-2">
+                              <Input value={itemInput[`skill-${tIdx}` as any] || ''} onChange={(e) => setItemInput({ ...itemInput, [`skill-${tIdx}`]: e.target.value })} placeholder="Add skill" />
+                              <Button variant="outline" size="sm" onClick={() => {
+                                const val = (itemInput[`skill-${tIdx}` as any] || '').trim();
+                                if (!val) return;
+                                const next = [...form.steps];
+                                const list = next[idx].tasks[tIdx].requiredSkills || [];
+                                list.push(val);
+                                next[idx].tasks[tIdx].requiredSkills = list;
+                                setForm({ ...form, steps: next });
+                                setItemInput({ ...itemInput, [`skill-${tIdx}`]: '' } as any);
+                              }}>Add</Button>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {(t.requiredSkills || []).map((sk, si) => (
+                                <span key={`${sk}-${si}`} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-xs">
+                                  {sk}
+                                  <button onClick={() => {
+                                    const next = [...form.steps];
+                                    next[idx].tasks[tIdx].requiredSkills = (next[idx].tasks[tIdx].requiredSkills || []).filter(x => x !== sk);
+                                    setForm({ ...form, steps: next });
+                                  }} aria-label="Remove"><X className="h-3 w-3" /></button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-xs font-medium mb-1 block">Equipment</label>
+                            <div className="flex gap-2">
+                              <Input value={itemInput[`equip-${tIdx}` as any] || ''} onChange={(e) => setItemInput({ ...itemInput, [`equip-${tIdx}`]: e.target.value })} placeholder="Add equipment" />
+                              <Button variant="outline" size="sm" onClick={() => {
+                                const val = (itemInput[`equip-${tIdx}` as any] || '').trim();
+                                if (!val) return;
+                                const next = [...form.steps];
+                                const list = next[idx].tasks[tIdx].equipment || [];
+                                list.push(val);
+                                next[idx].tasks[tIdx].equipment = list;
+                                setForm({ ...form, steps: next });
+                                setItemInput({ ...itemInput, [`equip-${tIdx}`]: '' } as any);
+                              }}>Add</Button>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {(t.equipment || []).map((eq, ei) => (
+                                <span key={`${eq}-${ei}`} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-xs">
+                                  {eq}
+                                  <button onClick={() => {
+                                    const next = [...form.steps];
+                                    next[idx].tasks[tIdx].equipment = (next[idx].tasks[tIdx].equipment || []).filter(x => x !== eq);
+                                    setForm({ ...form, steps: next });
+                                  }} aria-label="Remove"><X className="h-3 w-3" /></button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-xs font-medium mb-1 block">QA Checks</label>
+                            <div className="flex gap-2">
+                              <Input value={itemInput[`qa-${tIdx}` as any] || ''} onChange={(e) => setItemInput({ ...itemInput, [`qa-${tIdx}`]: e.target.value })} placeholder="Add QA check" />
+                              <Button variant="outline" size="sm" onClick={() => {
+                                const val = (itemInput[`qa-${tIdx}` as any] || '').trim();
+                                if (!val) return;
+                                const next = [...form.steps];
+                                const list = next[idx].tasks[tIdx].qaChecks || [];
+                                list.push(val);
+                                next[idx].tasks[tIdx].qaChecks = list;
+                                setForm({ ...form, steps: next });
+                                setItemInput({ ...itemInput, [`qa-${tIdx}`]: '' } as any);
+                              }}>Add</Button>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {(t.qaChecks || []).map((qc, qi) => (
+                                <span key={`${qc}-${qi}`} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-xs">
+                                  {qc}
+                                  <button onClick={() => {
+                                    const next = [...form.steps];
+                                    next[idx].tasks[tIdx].qaChecks = (next[idx].tasks[tIdx].qaChecks || []).filter(x => x !== qc);
+                                    setForm({ ...form, steps: next });
+                                  }} aria-label="Remove"><X className="h-3 w-3" /></button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-xs font-medium mb-1 block">Safety Notes</label>
+                            <Textarea value={t.safetyNotes || ''} onChange={(e) => {
+                              const next = [...form.steps];
+                              next[idx].tasks[tIdx].safetyNotes = e.target.value;
+                              setForm({ ...form, steps: next });
+                            }} />
                           </div>
                         </div>
                       </div>
