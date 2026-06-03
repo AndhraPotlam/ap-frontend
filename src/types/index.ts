@@ -249,7 +249,32 @@ export interface ExpenseSummary {
   }>;
 }
 
-// New Task Management Types
+// Raw Material Types
+export interface RawMaterial {
+  _id: string;
+  name: string;
+  description?: string;
+  category: string;
+  unit: string;
+  costPerUnit: number;
+  supplier?: string;
+  minimumStock: number;
+  currentStock: number;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Recipe Types
+export interface RecipeIngredient {
+  _id?: string;
+  rawMaterial: string | RawMaterial;
+  quantity: number;
+  unit: string;
+  notes?: string;
+}
+
 export type TaskType = 'cooking'|'cutting'|'preparing'|'cleaning'|'mixing'|'removing'|'soaking'|'other';
 export type TaskPriority = 'low'|'medium'|'high'|'urgent';
 
@@ -289,21 +314,46 @@ export interface RecipeStep {
   tasks: StepTaskTemplate[];
 }
 
+export interface RecipeProcess {
+  _id?: string;
+  name: string;
+  description?: string;
+  steps: RecipeStep[];
+}
+
 export interface Recipe {
   _id: string;
   name: string;
   description?: string;
   category?: string;
-  serves?: number;
+  serves: number;
+  prepTimeMin?: number;
+  cookTimeMin?: number;
+  totalTimeMin?: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  cuisine?: string;
+  ingredients: RecipeIngredient[];
+  recipeProcess: RecipeProcess;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Legacy RecipeProcess (for backward compatibility with existing task management)
+export interface LegacyRecipeProcess {
+  _id: string;
+  name: string;
+  description?: string;
+  category?: string;
   isActive: boolean;
   steps: RecipeStep[];
   createdBy?: string;
 }
 
 export interface DayPlanSelectedRecipe {
-  recipe: string | Recipe;
+  recipe: string | RecipeProcess;
   plannedStart?: string; // HH:mm
-  serves?: number;
 }
 
 export interface DayPlan {

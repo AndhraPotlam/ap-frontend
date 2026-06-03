@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Calendar, Percent, DollarSign, Users, Copy, Tag, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Percent, DollarSign, Users, Copy, Tag, ArrowLeft, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Discount {
@@ -295,12 +295,19 @@ export default function AdminDiscountsPage() {
         </div>
 
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Discount Management</h1>
-          <Button onClick={() => setShowCreateForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Discount
+          <h1 className="text-3xl font-bold">Price Management</h1>
+          <Button onClick={() => router.push('/admin/price-management')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go to Price Management
           </Button>
         </div>
+
+        <Alert className="mb-8">
+          <AlertDescription>
+            Discounts have been moved to the new <strong>Price Management</strong> section. 
+            Click the button above to access the unified price management interface.
+          </AlertDescription>
+        </Alert>
 
         {error && (
           <Alert className="mb-6">
