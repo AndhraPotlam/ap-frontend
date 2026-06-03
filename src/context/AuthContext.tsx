@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import api, { tokenUtils } from '@/lib/api';
 
@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   const clearAuthState = () => {
     setUser(null);
@@ -108,46 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
   }, []); // Empty dependency array means this runs once on mount
 
-  // Handle all redirects based on auth state and current path
-  useEffect(() => {
-    if (!isInitialized || isLoading) return;
-    
-    const isPublicPath = pathname.startsWith('/auth/');
-    const isAdminPath = pathname.startsWith('/admin/');
-    
-    console.log('🔄 AuthContext redirect check:', {
-      isInitialized,
-      isLoading,
-      isAuthenticated,
-      pathname,
-      isPublicPath,
-      isAdminPath,
-      userRole: user?.role
-    });
 
-    // If user is authenticated and tries to access auth pages, redirect to home
-    if (isAuthenticated && isPublicPath) {
-      console.log('🔄 AuthContext: Authenticated user on auth page, redirecting to home');
-      router.replace('/');
-      return;
-    }
-
-    // If no token and trying to access protected route (except public paths)
-    if (!isAuthenticated && !isPublicPath) {
-      console.log('🔄 AuthContext: Unauthenticated user on protected route, redirecting to login');
-      router.replace('/auth/login');
-      return;
-    }
-
-    // If trying to access admin routes without admin role
-    if (isAdminPath && user?.role !== 'admin') {
-      console.log('🔄 AuthContext: Non-admin user on admin route, redirecting to home');
-      router.replace('/');
-      return;
-    }
-
-    console.log('✅ AuthContext: Allowing current page');
-  }, [isInitialized, isAuthenticated, pathname, user?.role, isLoading, router]);
 
   // Don't render children until auth is initialized
   if (!isInitialized) {

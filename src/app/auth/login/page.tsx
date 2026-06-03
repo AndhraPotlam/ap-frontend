@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, User, ShoppingCart, Heart, Loader2 } from "lucide-react";
 import { toast } from 'sonner';
-import api from '@/lib/api';
+import api, { tokenUtils } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,7 +49,12 @@ export default function LoginPage() {
       const response = await api.post('/users/login', formData);
       
       if (response.ok) {
+        const data = await response.json();
         console.log('✅ Login successful, checking auth...');
+        
+        if (data.token) {
+          tokenUtils.setToken(data.token);
+        }
         
         // Wait a bit for cookies to be set
         await new Promise(resolve => setTimeout(resolve, 100));

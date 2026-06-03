@@ -35,6 +35,34 @@ export const tokenUtils = {
   }
 };
 
+// Helper to handle API response and intercept unauthorized states
+const handleResponse = async (response: Response): Promise<Response> => {
+  if (response.status === 401) {
+    if (typeof window !== 'undefined') {
+      console.warn('⚠️ API returned 401 Unauthorized. Clearing session...');
+      tokenUtils.removeToken();
+      
+      const isProduction = process.env.NODE_ENV === 'production';
+      const sameSite = isProduction ? 'None' : 'Lax';
+      const secure = isProduction ? '; Secure' : '';
+      document.cookie = `role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=${sameSite}${secure}`;
+      
+      const pathname = window.location.pathname;
+      const isProtectedRoute = 
+        pathname.startsWith('/admin') || 
+        pathname.startsWith('/dashboard') || 
+        pathname.startsWith('/profile') || 
+        pathname.startsWith('/orders') || 
+        pathname.startsWith('/checkout');
+        
+      if (isProtectedRoute && !pathname.startsWith('/auth/')) {
+        window.location.href = `/auth/login?sessionExpired=true&redirect=${encodeURIComponent(pathname)}`;
+      }
+    }
+  }
+  return response;
+};
+
 // Generic CRUD operations
 export const api = {
   // GET request
@@ -49,11 +77,12 @@ export const api = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    return await fetch(`${API_BASE_URL}${url}${queryString}`, {
+    const response = await fetch(`${API_BASE_URL}${url}${queryString}`, {
       method: 'GET',
       headers,
       credentials: 'include', // Include cookies in requests
     });
+    return handleResponse(response);
   },
 
   // POST request
@@ -67,12 +96,13 @@ export const api = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    return await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
       headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include', // Include cookies in requests
     });
+    return handleResponse(response);
   },
 
   // POST form data (for file uploads)
@@ -84,12 +114,13 @@ export const api = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    return await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
       headers,
       body: formData,
       credentials: 'include', // Include cookies in requests
     });
+    return handleResponse(response);
   },
 
   // PUT request
@@ -103,12 +134,13 @@ export const api = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    return await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'PUT',
       headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include', // Include cookies in requests
     });
+    return handleResponse(response);
   },
 
   // PATCH request
@@ -122,12 +154,13 @@ export const api = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    return await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'PATCH',
       headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include', // Include cookies in requests
     });
+    return handleResponse(response);
   },
 
   // DELETE request
@@ -141,11 +174,12 @@ export const api = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    return await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'DELETE',
       headers,
       credentials: 'include', // Include cookies in requests
     });
+    return handleResponse(response);
   },
 };
 
