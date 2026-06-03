@@ -626,7 +626,6 @@ export default function AddRecipePage() {
                                     <div>
                                       <Label className="text-xs">Task Name</Label>
                                       <Input
-                                        size="sm"
                                         value={task.name}
                                         onChange={(e) => updateTask(stepIndex, taskIndex, 'name', e.target.value)}
                                         placeholder="Task name"

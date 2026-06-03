@@ -1,10 +1,14 @@
-version: "3.8"
-
 services:
   frontend-prod:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      args:
+        # ⚠️ NEXT_PUBLIC_API_URL is baked into the JS bundle at build time.
+        # Use a relative path so the browser sends requests to VM A's Nginx,
+        # which then proxies /api to the backend VM.
+        - NEXT_PUBLIC_API_URL=/api
+        - NEXT_PUBLIC_SITE_URL=http://localhost:3000
     expose:
       - "3000"
     environment:
@@ -12,7 +16,8 @@ services:
     env_file:
       - .env
     networks:
-      - app-network
+      - frontend-net
+    restart: always
 
   nginx:
     image: nginx:latest
@@ -24,8 +29,9 @@ services:
     depends_on:
       - frontend-prod
     networks:
-      - app-network
+      - frontend-net
+    restart: always
 
 networks:
-  app-network:
-    external: true
+  frontend-net:
+    driver: bridge
