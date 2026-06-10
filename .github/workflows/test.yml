@@ -33,11 +33,11 @@ jobs:
           cache-dependency-path: ap-frontend/yarn.lock
 
       - name: Install Frontend Dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: ap-frontend
 
       - name: Install Backend Dependencies (for seeding)
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: ap-backend
 
       - name: Run Jest Unit/Component Tests
