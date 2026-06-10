@@ -21,6 +21,9 @@ jobs:
         with:
           repository: AndhraPotlam/ap-backend
           path: ap-backend
+          # If the backend repository is private, configure a Personal Access Token (PAT)
+          # with read access as a secret named BACKEND_CHECKOUT_TOKEN in your frontend repository.
+          token: ${{ secrets.BACKEND_CHECKOUT_TOKEN || github.token }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
