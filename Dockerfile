@@ -2,17 +2,17 @@ FROM node:22-alpine
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY package.json yarn.lock ./
 
-# Use npm ci for production install
-RUN npm ci
+# Use yarn install for clean installs
+RUN yarn install --frozen-lockfile
 
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN yarn build
 
 EXPOSE 3000
 
 # Use Next.js production server
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
