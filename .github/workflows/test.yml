@@ -26,19 +26,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ap-frontend/package-lock.json
+          cache: 'yarn'
+          cache-dependency-path: ap-frontend/yarn.lock
 
       - name: Install Frontend Dependencies
-        run: npm ci
+        run: yarn install --frozen-lockfile
         working-directory: ap-frontend
 
       - name: Install Backend Dependencies (for seeding)
-        run: npm ci
+        run: yarn install --frozen-lockfile
         working-directory: ap-backend
 
       - name: Run Jest Unit/Component Tests
-        run: npm run test:unit
+        run: yarn test:unit
         working-directory: ap-frontend
 
       - name: Spin up Docker Compose Stack
@@ -49,7 +49,7 @@ jobs:
         run: npx wait-on --timeout 60000 http://localhost:8080/health
 
       - name: Seed Database
-        run: npx ts-node tests/setup/seed.ts
+        run: yarn ts-node tests/setup/seed.ts
         working-directory: ap-backend
         env:
           MONGODB_URI: mongodb://localhost:27017/andhra-potlam
@@ -60,7 +60,7 @@ jobs:
         working-directory: ap-frontend
 
       - name: Run Playwright E2E Tests
-        run: npm run test:e2e
+        run: yarn test:e2e
         working-directory: ap-frontend
         env:
           TEST_APP_URL: http://localhost:8080

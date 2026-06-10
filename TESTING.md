@@ -63,13 +63,13 @@ ap-frontend/
 ### Step 1: Install Dependencies
 Ensure all development and test dependencies are installed:
 ```bash
-npm install
+yarn install
 ```
 
 ### Step 2: Running Unit/Component Tests
 Runs the RTL component test suite:
 ```bash
-npm run test:unit
+yarn test:unit
 ```
 
 ### Step 3: Running E2E Browser Tests Locally
@@ -103,7 +103,7 @@ Because E2E tests require both the frontend, backend, database, and proxy to be 
 4. **Run Playwright E2E Tests**:
    Run the browser tests against the Nginx port 8080 entrypoint:
    ```bash
-   TEST_APP_URL=http://localhost:8080 npm run test:e2e
+   TEST_APP_URL=http://localhost:8080 yarn test:e2e
    ```
 
 5. **Clean up/Tear down**:
@@ -123,7 +123,7 @@ NODE_ENV=test MONGODB_URI=mongodb://localhost:27018/andhra-potlam npx ts-node te
 cd ../ap-frontend
 
 # Run E2E tests against custom Nginx proxy port
-TEST_APP_URL=http://localhost:8082 npm run test:e2e
+TEST_APP_URL=http://localhost:8082 yarn test:e2e
 
 # Clean up
 TEST_NGINX_PORT=8082 TEST_MONGO_PORT=27018 docker-compose -f docker-compose.test.yml down -v
