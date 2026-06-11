@@ -52,7 +52,8 @@ jobs:
         run: npx wait-on --timeout 60000 http://localhost:8080/health
 
       - name: Seed Database
-        run: yarn ts-node --project tsconfig.json -O '{"rootDir": "."}' tests/setup/seed.ts
+        run: |
+          yarn ts-node --project tsconfig.json -O '{"rootDir": "."}' tests/setup/seed.ts
         working-directory: ap-backend
         env:
           MONGODB_URI: mongodb://localhost:27017/andhra-potlam
