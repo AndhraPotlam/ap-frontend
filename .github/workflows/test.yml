@@ -51,9 +51,12 @@ jobs:
       - name: Wait for Nginx to be Healthy
         run: npx wait-on --timeout 60000 http://localhost:8080/health
 
+      - name: Compile Seed Script
+        run: ./node_modules/.bin/tsc --project tsconfig.seed.json
+        working-directory: ap-backend
+
       - name: Seed Database
-        run: |
-          npx tsx tests/setup/seed.ts
+        run: node dist/tests/setup/seed.js
         working-directory: ap-backend
         env:
           MONGODB_URI: mongodb://localhost:27017/andhra-potlam
