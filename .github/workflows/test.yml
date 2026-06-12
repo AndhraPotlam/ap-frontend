@@ -53,7 +53,7 @@ jobs:
 
       - name: Seed Database
         run: |
-          yarn tsx tests/setup/seed.ts
+          npx tsx tests/setup/seed.ts
         working-directory: ap-backend
         env:
           MONGODB_URI: mongodb://localhost:27017/andhra-potlam
