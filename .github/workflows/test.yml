@@ -2,9 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, test-init ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, test-init ]
 
 jobs:
   test:
@@ -21,6 +21,7 @@ jobs:
         with:
           repository: AndhraPotlam/ap-backend
           path: ap-backend
+          ref: test-init
           # If the backend repository is private, configure a Personal Access Token (PAT)
           # with read access as a secret named BACKEND_CHECKOUT_TOKEN in your frontend repository.
           token: ${{ secrets.BACKEND_CHECKOUT_TOKEN || github.token }}
