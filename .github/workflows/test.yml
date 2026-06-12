@@ -1,0 +1,87 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, test-init ]
+  pull_request:
+    branches: [ main, test-init ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Frontend
+        uses: actions/checkout@v4
+        with:
+          path: ap-frontend
+
+      - name: Checkout Backend
+        uses: actions/checkout@v4
+        with:
+          repository: AndhraPotlam/ap-backend
+          path: ap-backend
+          ref: test-init
+          # If the backend repository is private, configure a Personal Access Token (PAT)
+          # with read access as a secret named BACKEND_CHECKOUT_TOKEN in your frontend repository.
+          token: ${{ secrets.BACKEND_CHECKOUT_TOKEN || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: ap-frontend/yarn.lock
+
+      - name: Install Frontend Dependencies
+        run: yarn install
+        working-directory: ap-frontend
+
+      - name: Install Backend Dependencies (for seeding)
+        run: yarn install
+        working-directory: ap-backend
+
+      - name: Run Jest Unit/Component Tests
+        run: yarn test:unit
+        working-directory: ap-frontend
+
+      - name: Spin up Docker Compose Stack
+        run: docker compose -f docker-compose.test.yml up -d --build
+        working-directory: ap-frontend
+
+      - name: Wait for Nginx to be Healthy
+        run: npx wait-on --timeout 60000 http://localhost:8080/health
+
+      - name: Compile Seed Script
+        run: ./node_modules/.bin/tsc --project tsconfig.seed.json
+        working-directory: ap-backend
+
+      - name: Seed Database
+        run: node dist/tests/setup/seed.js
+        working-directory: ap-backend
+        env:
+          MONGODB_URI: mongodb://localhost:27017/andhra-potlam
+          NODE_ENV: test
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: ap-frontend
+
+      - name: Run Playwright E2E Tests
+        run: yarn test:e2e
+        working-directory: ap-frontend
+        env:
+          TEST_APP_URL: http://localhost:8080
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: ap-frontend/playwright-report/
+          retention-days: 30
+
+      - name: Clean up Docker Containers
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
+        working-directory: ap-frontend
